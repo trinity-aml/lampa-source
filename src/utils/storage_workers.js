@@ -20,16 +20,28 @@ class WorkerArray{
         this.loaded = false
     }
 
-    init(){
+    init(class_type){
+        let timer_update
+
+        this.class_type = class_type
+
+        console.log('StorageWorker', this.field, 'start follow')
+
         Storage.listener.follow('change',(e)=>{
-            if(this.field == e.name && this.loaded){
+            if(this.field == e.name && this.loaded && Account.canSync() && Account.hasPremium()){
                 try{
                     this.save(e.value)
                 }
                 catch(e){
                     console.log('StorageWorker',this.field,e.message)
                 }
-            } 
+            }
+
+            if(e.name == 'account'){
+                clearTimeout(timer_update)
+
+                timer_update = setTimeout(this.update.bind(this,true),5 * 1000)
+            }
         })
 
         this.update()
@@ -57,11 +69,11 @@ class WorkerArray{
     }
 
     parse(from){
-        let to = Storage.cache(this.field, this.limit) ///this.restrict(Arrays.decodeJson(localStorage.getItem(this.field),Arrays.clone(this.empty)))
+        let to = Storage.cache(this.field, this.limit)
 
         this.filter(from, to)
 
-        Storage.set(this.field, to)//localStorage.setItem(this.field, JSON.stringify(to))
+        Storage.set(this.field, to)
 
         this.data = this.restrict(Arrays.decodeJson(localStorage.getItem(this.field),Arrays.clone(this.empty)))
 
@@ -74,22 +86,26 @@ class WorkerArray{
         })
     }
 
-    update(){
+    update(full){
         let account = Account.canSync()
 
-        if(account){
-            network.silent(api + 'storage/data/'+this.field,(result)=>{
+        clearTimeout(this.timer_error)
+
+        if(account && Account.hasPremium()){
+            console.log('StorageWorker',this.field,'update start')
+
+            network.silent(api + 'storage/data/'+encodeURIComponent(this.field) + '/' + this.class_type + (full ? '?full=true' : ''),(result)=>{
                 try{
                     this.parse(result.data)
+
+                    console.log('StorageWorker',this.field,'update end')
                 }
                 catch(e){
                     console.log('StorageWorker',this.field,e.message)
                 }
 
                 this.loaded = true
-            },()=>{
-                setTimeout(this.update.bind(this),1000*60*1)
-            },false,{
+            },false,false,{
                 headers: {
                     token: account.token,
                     profile: account.profile.id
@@ -99,7 +115,7 @@ class WorkerArray{
     }
 
     send(id,value){
-        if(this.field !== 'online_view' && !Account.hasPremium()) return
+        if(!Account.hasPremium()) return
 
         console.log('StorageWorker','save:',this.field, id,value)
 
@@ -169,19 +185,19 @@ class WorkerFilterID extends WorkerArray {
             let find = this.data.find(a=>a.id == val.id)
 
             if(!find){
-                this.data.push(val)
+                this.data.push(typeof val == 'object' ? Arrays.clone(val) : val)
 
                 uniq.push(val)
             } 
             else if(JSON.stringify(val) !== JSON.stringify(find)){
-                this.data[this.data.indexOf(find)] = val
+                this.data[this.data.indexOf(find)] = typeof val == 'object' ? Arrays.clone(val) : val
                 
                 uniq.push(val)
             }
         })
 
         uniq.forEach(val=>{
-            this.send(null, val)
+            this.send(val.id, val)
         })
     }
 
@@ -216,7 +232,7 @@ class WorkerObject extends WorkerArray {
             let b = this.data[id]
 
             if(!this.data[id]){
-                this.data[id] = a
+                this.data[id] = typeof a == 'object' ? Arrays.clone(a) : a
 
                 uniq.push(id)
             }
@@ -225,7 +241,7 @@ class WorkerObject extends WorkerArray {
                 b = JSON.stringify(b)
 
                 if(a !== b){
-                    this.data[id] = value[id]
+                    this.data[id] = typeof value[id] == 'object' ? Arrays.clone(value[id]) : value[id]
 
                     uniq.push(id)
                 }
@@ -245,17 +261,15 @@ class WorkerObject extends WorkerArray {
 }
 
 export default {
-    online_view: WorkerArray,
-    torrents_view: WorkerArray,
-    search_history: WorkerArray,
+    //['string',0499383]
+    array_string: WorkerArray,
 
-    timetable: WorkerFilterID,
-    quality_scan: WorkerFilterID,
+    //[{'id':'049994',...}]
+    array_object_id: WorkerFilterID,
 
-    online_choice_videocdn: WorkerObject,
-    online_choice_filmix: WorkerObject,
-    online_choice_kinobase: WorkerObject,
-    online_choice_cdnmovies: WorkerObject,
-    online_choice_rezka: WorkerObject,
-    online_last_balanser: WorkerObject,
+    //{'id048994':{...}, ...}
+    object_object: WorkerObject,
+
+    //{'id399884':'string', ...}
+    object_string: WorkerObject
 }

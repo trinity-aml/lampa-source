@@ -33,7 +33,7 @@ function init(){
 
                 Storage.set('timetable',data)
 
-                Account.removeStorage('timetable', find.id)
+                Storage.remove('timetable', find.id)
             }
         }
     })
@@ -109,7 +109,7 @@ function parse(){
     else{
         Arrays.remove(data, object)
 
-        Account.removeStorage('timetable', object.id)
+        Storage.remove('timetable', object.id)
 
         save()
     }
@@ -195,10 +195,46 @@ function all(){
     return data
 }
 
+function lately(){
+    let fav = Favorite.full().card
+
+    if(Account.working()) fav = Account.all()
+
+    fav = fav.filter(f=>f.number_of_seasons)
+
+    let now_date = new Date()
+        now_date.setHours(0,0,0)
+
+    let now_time = now_date.getTime()
+    let cards = []
+
+    data.filter(d=>fav.find(c=>c.id == d.id)).forEach(season=>{
+        let episodes = season.episodes.filter(ep=>Lampa.Utils.parseToDate(ep.air_date).getTime() >= now_time)
+        
+        if(episodes.length){
+            cards.push({
+                card: Arrays.clone(fav.find(c=>c.id == season.id)),
+                episode: episodes[0],
+                time: Lampa.Utils.parseToDate(episodes[0].air_date).getTime(),
+                season
+            })
+        }
+    })
+
+    cards = cards.sort((a,b)=>{
+        if(a.time > b.time) return 1
+        else if(a.time < b.time) return -1
+        else return 0
+    })
+    
+    return cards
+}
+
 export default {
     init,
     get,
     add,
     all,
-    update
+    update,
+    lately
 }
