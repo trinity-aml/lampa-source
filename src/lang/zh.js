@@ -540,6 +540,7 @@ export default {
     player_not_found: '找不到播放器',
     player_lauch: '启动播放器',
     player_speed_default_title: '普通',
+    player_speed_two_descr: '无声播放',
     player_video_speed: '播放速度',
     player_share_title: '分享',
     player_share_descr: '在另一台设备上播放此视频',
@@ -738,4 +739,9 @@ export default {
     settings_interface_card_cover: '显示封面',
 
     title_upcoming_episodes: '即将发布的剧集',
+    settings_rest_cache_images: '图片缓存',
+    settings_rest_cache_images_descr: '将海报和背景缓存到本地存储',
+
+    settings_player_rewind_title: '倒带',
+    settings_player_rewind_descr: '以秒为单位的倒带间隔',
 }

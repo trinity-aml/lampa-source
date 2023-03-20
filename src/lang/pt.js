@@ -777,6 +777,7 @@ export default {
     player_not_found: 'Videoplayer não encontrado',
     player_lauch: 'Iniciar videoplayer',
     player_speed_default_title: 'Simples',
+    player_speed_two_descr: 'Tocar sem som',
     player_video_speed: 'Velocidade de reprodução',
     player_share_title: 'Partilhar',
     player_share_descr: 'Reproduzir este vídeo em outro dispositivo',
@@ -989,4 +990,9 @@ export default {
     settings_interface_card_cover: 'Mostrar capa',
 
     title_upcoming_episodes: 'Próximos lançamentos de episódios',
+    settings_rest_cache_images: 'Cache de imagens',
+    settings_rest_cache_images_descr: 'Armazene pôsteres e planos de fundo no armazenamento local',
+
+    settings_player_rewind_title: 'Rebobinar',
+    settings_player_rewind_descr: 'Intervalo de retrocesso em segundos',
 }

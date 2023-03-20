@@ -204,6 +204,8 @@ function relise(params, oncomplite, onerror){
 
 function partPersons(parts, parts_limit, type){
     return (call)=>{
+        if(['movie','tv'].indexOf(type) == -1) return call()
+
         TMDB.get('/trending/person/day',{},(json)=>{
             call()
 
@@ -252,7 +254,16 @@ function partNext(parts, parts_limit, partLoaded, partEmpty){
                 parts[parts.indexOf(pieces[i])] = false
             }
 
-            if(data.length) partLoaded(data)
+            if(data.length){
+                if(data.length < 3){
+                    partNext(parts, parts_limit, (more_data)=>{
+                        data = data.concat(more_data)
+
+                        partLoaded(data)
+                    }, partEmpty)
+                }
+                else partLoaded(data)
+            }
             else partNext(parts, parts_limit, partLoaded, partEmpty)
         })
     }

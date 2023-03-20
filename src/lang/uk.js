@@ -615,6 +615,7 @@ export default {
     player_not_found: 'Плеєр не знайдено',
     player_lauch: 'Запустити плеєр',
     player_speed_default_title: 'Звичайна',
+    player_speed_two_descr: 'Відтворення без звуку',
     player_video_speed: 'Швидкість відтворення',
     player_share_title: 'Поділиться',
     player_share_descr: 'Запустити це відео на іншому пристрої',
@@ -826,4 +827,9 @@ export default {
     settings_interface_card_cover: 'Показати обкладинку',
 
     title_upcoming_episodes: 'Найближчі виходи епізодів',
+    settings_rest_cache_images: 'Кеш зображень',
+    settings_rest_cache_images_descr: 'Кешувати постери та фони у локальне сховище',
+
+    settings_player_rewind_title: 'Перемотування',
+    settings_player_rewind_descr: 'Інтервал перемотування за секунди',
 }

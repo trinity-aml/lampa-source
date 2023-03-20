@@ -776,6 +776,7 @@ export default {
     player_not_found: 'Player not found',
     player_lauch: 'Launch player',
     player_speed_default_title: 'Plain',
+    player_speed_two_descr: 'Play without sound',
     player_video_speed: 'Playback speed',
     player_share_title: 'Share',
     player_share_descr: 'Play this video on another device',
@@ -988,4 +989,9 @@ export default {
     settings_interface_card_cover: 'Show cover',
 
     title_upcoming_episodes: 'Upcoming episode releases',
+    settings_rest_cache_images: 'Image cache',
+    settings_rest_cache_images_descr: 'Cache posters and backgrounds to local storage',
+
+    settings_player_rewind_title: 'Rewind',
+    settings_player_rewind_descr: 'Rewind interval in seconds',
 }

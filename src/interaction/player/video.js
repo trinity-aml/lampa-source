@@ -11,6 +11,7 @@ import Lang from '../../utils/lang'
 import Panel from './panel'
 import Utils from '../../utils/math'
 import DeviceInput from '../../utils/device_input'
+import Orsay from './orsay'
 
 let listener = Subscribe()
 let html
@@ -37,6 +38,7 @@ let dash
 let webos_wait = {}
 let normalization
 let hls_parser
+let render_trigger
 
 let click_nums = 0
 let click_timer
@@ -429,7 +431,7 @@ function scale(){
     sx = sx.toFixed(2)
     sy = sy.toFixed(2)
     
-    if(Platform.is('orsay') || Storage.field('player_scale_method') == 'calculate'){
+    if((Platform.is('orsay') && Storage.field('player') == 'inner') || Storage.field('player_scale_method') == 'calculate'){
         var nw = vw * rt,
             nh = vh * rt
 
@@ -752,6 +754,11 @@ function create(){
     
     if(Platform.is('tizen') && Storage.field('player') == 'tizen'){
         videobox = Tizen((object)=>{
+            video = object
+        })
+    }
+    else if (Platform.is('orsay') && Storage.field('player') == 'orsay') {
+        videobox = Orsay((object) => {
             video = object
         })
     }
@@ -1083,17 +1090,17 @@ function rewindStart(position_time,immediately){
  */
 function rewind(forward, custom_step){
     if(video.duration){
-        var time = Date.now(),
-            step = video.duration / (30 * 60),
-            mini = time - (timer.rewind || 0) > 50 ? 20 : 60
+        let step = Storage.field('player_rewind')
 
         if(rewind_position == 0){
-            rewind_force = Math.min(mini,custom_step || 30 * step)
+            rewind_force = Math.max(5,custom_step || step)
 
             rewind_position = video.currentTime
         }
 
         rewind_force *= 1.03
+
+        console.log('force',rewind_force)
 
         if(forward){
             rewind_position += rewind_force
@@ -1167,6 +1174,11 @@ function destroy(savemeta){
     subsview(false)
 
     neeed_sacle = false
+    
+    if(render_trigger){
+        render_trigger.remove()
+        render_trigger = false
+    } 
 
     paused.addClass('hide')
 

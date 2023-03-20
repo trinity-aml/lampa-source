@@ -181,3 +181,21 @@ body.platform--netcast {
         }
     }
 }
+
+body.orsay-player--show{
+    background: transparent;
+
+    #app,
+    .modal,
+    .helper{
+        visibility: hidden;
+
+        * {
+            visibility: hidden !important;
+        }
+    }
+
+    .player{
+        background: transparent;
+    }
+}

@@ -22,6 +22,7 @@ class WorkerArray{
 
     init(class_type){
         let timer_update
+        let start_time = Date.now()
 
         this.class_type = class_type
 
@@ -41,6 +42,22 @@ class WorkerArray{
                 clearTimeout(timer_update)
 
                 timer_update = setTimeout(this.update.bind(this,true),5 * 1000)
+            }
+        })
+
+        Socket.listener.follow('message',(e)=>{
+            if(e.method == 'storage' && e.data.name == this.field){
+                clearTimeout(timer_update)
+
+                timer_update = setTimeout(this.update.bind(this,false,true),10 * 1000)
+            }
+        })
+
+        Socket.listener.follow('open',(e)=>{
+            if(Date.now() - start_time > 1000 * 60 * 5){
+                clearTimeout(timer_update)
+
+                timer_update = setTimeout(this.update.bind(this,false,true),10 * 1000)
             }
         })
 
@@ -68,12 +85,12 @@ class WorkerArray{
         return result
     }
 
-    parse(from){
-        let to = Storage.cache(this.field, this.limit)
+    parse(from, nolisten){
+        let to = Storage.cache(this.field, this.limit, Arrays.clone(this.empty))
 
         this.filter(from, to)
 
-        Storage.set(this.field, to)
+        Storage.set(this.field, to, nolisten)
 
         this.data = this.restrict(Arrays.decodeJson(localStorage.getItem(this.field),Arrays.clone(this.empty)))
 
@@ -86,10 +103,8 @@ class WorkerArray{
         })
     }
 
-    update(full){
+    update(full, nolisten){
         let account = Account.canSync()
-
-        clearTimeout(this.timer_error)
 
         if(account && Account.hasPremium()){
             console.log('StorageWorker',this.field,'update start')
@@ -103,7 +118,7 @@ class WorkerArray{
 
             network.silent(url,(result)=>{
                 try{
-                    this.parse(result.data)
+                    this.parse(result.data, nolisten)
 
                     console.log('StorageWorker',this.field,'update end')
                 }

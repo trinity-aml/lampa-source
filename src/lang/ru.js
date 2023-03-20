@@ -132,6 +132,8 @@ export default {
     settings_rest_card_quality_descr: 'Отображать отметки качества на карточках',
     settings_rest_card_episodes: 'Отметки эпизодов',
     settings_rest_card_episodes_descr: 'Отображать отметки эпизодов на карточках',
+    settings_rest_cache_images: 'Кэш изображений',
+    settings_rest_cache_images_descr: 'Кэшировать постеры и фоны в локальное хранилище',
 
     settings_parser_use: 'Использовать парсер',
     settings_parser_use_descr: 'Тем самым, вы соглашаетесь принять на себя всю ответственность за использование публичных ссылок для просмотра торрент и онлайн контента.',
@@ -179,7 +181,9 @@ export default {
     settings_player_quality: 'Качество видео по умолчанию',
     settings_player_quality_descr: 'Предпочтительное качество видео для просмотра',
     settings_player_hls_title: 'Обработка потока .m3u8',
-    settings_player_hls_descr: 'Не трогайте этот параметр, если не знаете, зачем он.',
+    settings_player_hls_descr: 'Не трогайте этот параметр, если не знаете, зачем он',
+    settings_player_rewind_title: 'Перемотка',
+    settings_player_rewind_descr: 'Интервал перемотки в секундах',
 
     settings_plugins_notice: 'Для применения плагина необходимо перезагрузить приложение',
     settings_plugins_add: 'Добавить плагин',
@@ -814,6 +818,7 @@ export default {
     player_not_found: 'Плеер не найден',
     player_lauch: 'Запустить плеер',
     player_speed_default_title: 'Обычная',
+    player_speed_two_descr: 'Воспроизводиться без звука',
     player_video_speed: 'Скорость воспроизведения',
     player_share_title: 'Поделиться',
     player_share_descr: 'Запустить это видео на другом устройстве',

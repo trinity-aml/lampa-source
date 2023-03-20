@@ -25,7 +25,7 @@ function init(){
         select('player',{
             'inner': '#{settings_param_player_inner}',
             'orsay': 'Orsay',
-        },'inner')
+        },'orsay')
     }
     else if(Platform.is('webos')){
         select('player',{
@@ -274,6 +274,8 @@ function update(elem,elems,elems_html){
 
         if(value) parent.toggleClass('hide',Storage.field(name) !== value)
         else parent.toggleClass('hide',!Storage.field(name))
+
+        listener.send('update_scroll_position')
     }
 }
 
@@ -362,6 +364,16 @@ select('parse_timeout',{
     '30': '30',
     '60': '60'
 },'15')
+
+select('player_rewind',{
+    '5': '5',
+    '10': '10',
+    '15': '15',
+    '20': '20',
+    '30': '30',
+    '50': '50',
+    '100': '100'
+},'20')
 
 select('player_timecode',{
     'again': '#{settings_param_player_timecode_again}',
@@ -494,6 +506,7 @@ trigger('glass_style', false)
 trigger('black_style', false)
 trigger('hide_outside_the_screen', true)
 trigger('card_interfice_cover', true)
+trigger('cache_images', false)
 
 
 
