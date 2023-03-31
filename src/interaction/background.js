@@ -3,6 +3,7 @@ import Storage from '../utils/storage'
 import Arrays from '../utils/arrays'
 import Platform from '../utils/platform'
 import ImageCache from '../utils/cache/images'
+import Player from './player'
 
 let html = $(`
     <div class="background">
@@ -20,6 +21,9 @@ let background = {
         ctx: $('.background__two',html)[0].getContext('2d')
     }
 }
+
+let theme_elem = $('head meta[name="theme-color"]')
+let theme_last = '#1d1f20'
 
 let view = 'one'
 let src  = ''
@@ -138,6 +142,13 @@ function draw(data, item, noimage){
         item.ctx.fillRect(0, 0, item.canvas[0].width, item.canvas[0].height)
 
         item.canvas.addClass('visible')
+
+        try{
+            let point = item.ctx.getImageData(Math.round(item.canvas[0].width / 2), 1, 1, 1).data
+
+            if(!Player.opened()) theme(Color.rgbToHex(point[0],point[1],point[2]))
+        }
+        catch(e){}
     })
 }
 
@@ -173,13 +184,13 @@ function resize(){
 
     html.find('canvas').removeClass('visible')
 
-    background.one.canvas.width(window.innerWidth)
-    background.one.canvas.height(window.innerHeight)
-
-    background.two.canvas.width(window.innerWidth)
-    background.two.canvas.height(window.innerHeight)
-
     timer_resize = setTimeout(()=>{
+        background.one.canvas.width(window.innerWidth)
+        background.one.canvas.height(window.innerHeight)
+
+        background.two.canvas.width(window.innerWidth)
+        background.two.canvas.height(window.innerHeight)
+
         if(loaded[src]) draw(loaded[src], background[view])
     },200)
 }
@@ -280,6 +291,14 @@ function immediately(url = ''){
     else draw(false, false, true)
 }
 
+function theme(color){
+    if(color == 'black') color = '#000000'
+    else if(color == 'reset') color = theme_last
+    else theme_last = color
+    
+    theme_elem.attr('content', color)
+}
+
 /**
  * Рендер
  * @returns {object}
@@ -293,5 +312,6 @@ export default {
     change,
     update: resize,
     init,
-    immediately
+    immediately,
+    theme
 }
