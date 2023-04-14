@@ -448,11 +448,24 @@ function person(params = {}, oncomplite, onerror){
         }
         else{
             let title_production = Lang.translate('full_production'),
-                title_directing  = Lang.translate('full_directing')
+                title_directing  = Lang.translate('full_directing'),
+                title_writing =  Lang.translate('full_writing')
 
-            credits.crew.forEach(a=>{
-                a.department = a.department == 'Production' ? title_production : a.department == 'Directing' ? title_directing : a.department 
-            })
+                credits.crew.forEach((a) => {
+                  switch (a.department) {
+                    case "Production":
+                      a.department = title_production;
+                      break;
+                    case "Directing":
+                      a.department = title_directing;
+                      break;
+                    case "Writing":
+                      a.department = title_writing;
+                      break;
+                    default:
+                      break;
+                  }
+                });
 
             let cast  = sortCredits(credits.cast),
                 crew  = sortCredits(credits.crew),
@@ -587,10 +600,38 @@ function external_imdb_id(params = {}, oncomplite){
     })
 }
 
-function company(params = {}, oncomplite, onerror){
-    let u = url('company/'+params.id,params)
+function company(params = {}, oncomplite, onerror) {
+    let status = new Status(3)
+        status.onComplite = ()=>{
+            function sortResultsByVoteAverage(results) {
+              return results.sort((a, b) => b.vote_average - a.vote_average)
+            }
 
-    network.silent(u,oncomplite, onerror)
+            if(status.data.company){
+                let fulldata = {
+                    company: status.data.company,
+                    lines: []
+                }
+
+                if(status.data.movie && status.data.movie.results.length) fulldata.lines.push({nomore: true, title: Lang.translate('menu_movies'), results: sortResultsByVoteAverage(status.data.movie.results) })
+                if(status.data.tv && status.data.tv.results.length)       fulldata.lines.push({nomore: true, title: Lang.translate('menu_tv'), results: sortResultsByVoteAverage(status.data.tv.results) })
+
+                oncomplite(fulldata)
+            }
+            else onerror()
+        }
+
+    get('company/' + params.id,params,(json)=>{
+        status.append('company', json)
+    },status.error.bind(status))
+
+    get('discover/movie?sort_by=vote_count.desc&with_companies=' + params.id,params,(json)=>{
+        status.append('movie', json)
+    },status.error.bind(status))
+
+    get('discover/tv?sort_by=vote_count.desc&with_companies=' + params.id,params,(json)=>{
+        status.append('tv', json)
+    },status.error.bind(status))
 }
 
 function seasons(tv, from, oncomplite){
