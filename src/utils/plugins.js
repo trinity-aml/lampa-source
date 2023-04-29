@@ -66,13 +66,10 @@ function save(){
 function updatePluginDB(name, url){
     if(Account.hasPremium()){
         _network.native(url,(str)=>{
-            Cache.getData('plugins',name).then(cache=>{
-                if(cache) Cache.updateData('plugins',name, str)
-                else Cache.addData('plugins',name, str)
-
+            Cache.rewriteData('plugins', name, str).then(()=>{
                 console.log('Plugins','update plugin cache:', name)
-            }).catch(e=>{
-                console.log('Plugins','add to cache fail:', name, typeof e == 'string' ? e : e.message)
+            }).catch((e)=>{
+                console.log('Plugins','add to cache fail:', name, typeof e == 'string' ? e : e ? e.message : 'no details')
             })
         },false,false,{
             dataType: 'text'

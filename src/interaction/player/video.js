@@ -12,6 +12,8 @@ import Panel from './panel'
 import Utils from '../../utils/math'
 import DeviceInput from '../../utils/device_input'
 import Orsay from './orsay'
+import YouTube from './youtube'
+import TV from './iptv'
 
 let listener = Subscribe()
 let html
@@ -62,11 +64,13 @@ function init(){
             
             click_nums++
 
+            if(TV.playning()) click_nums = 1
+
             if (click_nums === 1) {
                 click_timer = setTimeout(() => {
                     click_nums = 0
 
-                    if(Panel.visibleStatus()) playpause()
+                    if(Panel.visibleStatus() && !TV.playning()) playpause()
                     else Panel.mousemove()
                 }, 300)
             }
@@ -100,6 +104,8 @@ function init(){
                 neeed_sacle = neeed_sacle_last
     
                 scale()
+
+                if(video.resize) video.resize()
             } 
         },200)
     })
@@ -822,6 +828,20 @@ function create(){
     bind()
 }
 
+function createYouTubePlayer(url){
+    let videobox = YouTube((object) => {
+        video = object
+    })
+
+    display.append(videobox)
+
+    bind()
+
+    setTimeout(()=>{
+        load(url)
+    },100)
+}
+
 function normalizationVisible(status){
     if(normalization) normalization.visible(status)
 }
@@ -852,6 +872,8 @@ function loader(status){
         dash.destroy()
         dash = false
     }
+
+    if(src.indexOf('youtube.com') >= 0) return createYouTubePlayer(src)
 
     create()
 
@@ -912,7 +934,7 @@ function loader(status){
                     hls.currentLevel = hlsLevelDefault(hls)
                 })
             }
-            else if(!change_quality){
+            else if(!change_quality && !TV.playning()){
                 console.log('Player','hls start parse')
 
                 let send_load_ready = false

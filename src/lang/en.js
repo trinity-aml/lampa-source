@@ -536,6 +536,7 @@ export default {
     filter_filtred: 'Filter',
     filter_any: 'Any',
     filter_combinations: 'Combinations',
+    filter_alt_names: 'Other names',
     filter_rating_from: 'from',
     filter_rating_to: 'to',
 
@@ -788,6 +789,8 @@ export default {
     player_normalization_step_low: 'Low',
     player_normalization_step_medium: 'Average',
     player_normalization_step_hight: 'High',
+    player_youtube_no_played: 'Sorry, this video is not available in your region and may have been blocked or removed.',
+    player_youtube_start_play: 'To start playing the video, click the "Play" button.',
 
     broadcast_open: 'Open card on another device',
     broadcast_play: 'Choose the device to watch on',
@@ -815,6 +818,7 @@ export default {
     notice_none: 'You don\'t have any notifications yet, register at <b>www.cub.watch</b> to follow new episodes and releases.',
     notice_in_quality: 'As',
     notice_none_account: 'You don\'t have any notifications yet, bookmark the series and wait for notifications of new episodes.',
+    notice_none_system: 'You currently have no notifications. We will be sure to notify you when new notifications become available.',
 
     copy_link: 'Copy video link',
     copy_secuses: 'Link copied to clipboard',

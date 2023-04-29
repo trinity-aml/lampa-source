@@ -535,6 +535,7 @@ export default {
     filter_filtred: 'Filtrar',
     filter_any: 'Qualquer',
     filter_combinations: 'Combinações',
+    filter_alt_names: 'Outros nomes',
     filter_rating_from: 'desde',
     filter_rating_to: 'até',
 
@@ -788,6 +789,8 @@ export default {
     player_normalization_step_low: 'Baixo',
     player_normalization_step_medium: 'Médio',
     player_normalization_step_hight: 'Alto',
+    player_youtube_no_played: 'Desculpe, este vídeo não está disponível em sua região e pode ter sido bloqueado ou removido.',
+    player_youtube_start_play: 'Para começar a reproduzir o vídeo, clique no botão "Reproduzir"',
 	
 	broadcast_open: 'Abrir o cartão em outro dispositivo',
     broadcast_play: 'Escolha o dispositivo para assistir',
@@ -815,6 +818,7 @@ export default {
     notice_none: 'Ainda não tem notificações, registe-se em <b>www.cub.watch</b> para acompanhar novos episódios e lançamentos.',
     notice_in_quality: 'Como',
     notice_none_account: 'Você ainda não tem notificações, marque a série e aguarde as notificações de novos episódios.',
+    notice_none_system: 'Você não tem nenhuma notificação. Nós iremos notificá-lo quando novas notificações estiverem disponíveis.',
 	 
 	copy_link: 'Copiar endereço do vídeo',
     copy_secuses: 'Endereço copiado para a área de transferência',

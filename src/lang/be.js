@@ -537,6 +537,7 @@ export default {
     filter_filtred: 'Фільтр',
     filter_any: 'Любы',
     filter_combinations: 'Камбінацыі',
+    filter_alt_names: 'Іншыя назвы',
     filter_rating_from: 'ад',
     filter_rating_to: 'да',
     
@@ -789,6 +790,8 @@ export default {
     player_normalization_step_low: 'Нізкае',
     player_normalization_step_medium: 'Сярэдняе',
     player_normalization_step_hight: 'Высокае',
+    player_youtube_no_played: 'Нажаль, гэта відэа не даступна ў вашым рэгіёне, магчыма, яно было заблакавана ці выдаленае.',
+    player_youtube_start_play: 'Для пачатку прайгравання відэа, націсніце кнопку "Плэй"',
 
     broadcast_open: 'Адкрыць картку на іншай прыладзе',
     broadcast_play: 'Абярыце прыладу на якой глядзець',
@@ -919,6 +922,7 @@ export default {
     week_7: 'Нд',
 
     notice_none_account: 'У вас яшчэ няма ніякіх апавяшчэнняў, дадайце серыялы ў закладкі і чакайце апавяшчэння аб новых серыях.',
+    notice_none_system: 'На дадзены момант у вас адсутнічаюць апавяшчэння. Мы абавязкова апавясцім вас, калі з\'явяцца новыя апавяшчэнні.',
     
     extensions_enable: 'Уключыць',
     extensions_disable: 'Адключыць',

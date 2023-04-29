@@ -13,6 +13,8 @@ import Select from './interaction/select'
 import Favorite from './utils/favorite'
 import Background from './interaction/background'
 import Notice from './interaction/notice'
+import NoticeClass from './interaction/notice/class'
+import NoticeClassLampa from './interaction/notice/lampa'
 import Head from './components/head'
 import Menu from './components/menu'
 import Utils from './utils/math'
@@ -78,6 +80,8 @@ import Theme from './utils/theme'
 import AdManager from './interaction/ad/manager'
 import DB from './utils/db'
 import NavigationBar from './interaction/navigation_bar'
+import Endless from './interaction/endless'
+import Color from './utils/color'
 
 /**
  * Настройки движка
@@ -114,6 +118,8 @@ window.Lampa = {
     Menu,
     Head,
     Notice,
+    NoticeClass,
+    NoticeClassLampa,
     Background,
     Favorite,
     Select,
@@ -176,7 +182,9 @@ window.Lampa = {
     DeviceInput,
     Worker: AppWorker,
     DB,
-    NavigationBar
+    NavigationBar,
+    Endless,
+    Color
 }
 
 function closeApp(){
@@ -282,7 +290,7 @@ function developerApp(proceed){
 
     let keydown = (event)=>{
         if(expect){
-            if(event.keyCode === 38) check()
+            if(event.keyCode === 38||event.keyCode === 29460||event.keyCode === 50400012) check()
         }
         else{
             document.removeEventListener('keydown', keydown)
@@ -311,8 +319,8 @@ function startApp(){
     Select.init()
     Favorite.init()
     Background.init()
-    Notice.init()
     Head.init()
+    Notice.init()
     Menu.init()
     Activity.init()
     Screensaver.init()
@@ -398,6 +406,10 @@ function startApp(){
 
     Render.app()
 
+    /** Проверяем уведомления */
+
+    Notice.drawCount()
+
     /** Обновляем слои */
 
     Layer.update()
@@ -472,6 +484,15 @@ function startApp(){
         if(url){
             torrent_net.timeout(10000)
 
+            let head = {dataType: 'text'}
+            let auth = Storage.field('torrserver_auth')
+
+            if(auth){
+                head.headers = {
+                    Authorization: "Basic " + Base64.encode(Storage.get('torrserver_login')+':'+Storage.get('torrserver_password'))
+                }
+            }
+
             torrent_net.native(Utils.checkHttp(Storage.get(name)), ()=>{
                 item.removeClass('wait').addClass('active')
             }, (a, c)=> {
@@ -485,9 +506,7 @@ function startApp(){
 
                     Noty.show(torrent_net.errorDecode(a, c) + ' - ' + url, {time: 5000})
                 }
-            }, false, {
-                dataType: 'text'
-            })
+            }, false, head)
         }
     }
 

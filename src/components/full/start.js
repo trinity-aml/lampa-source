@@ -377,28 +377,60 @@ function create(data, params = {}){
                 let items = []
 
                 data.videos.results.forEach(element => {
+                    let date = Utils.parseTime(element.published_at).full
+
                     items.push({
-                        title: element.name,
-                        subtitle: element.official ? Lang.translate('full_trailer_official') : Lang.translate('full_trailer_no_official'),
+                        title: Utils.shortText(element.name, 50),
+                        subtitle: (element.official ? Lang.translate('full_trailer_official') : Lang.translate('full_trailer_no_official')) + ' - ' + date,
                         id: element.key,
                         player: element.player,
-                        url: element.url
+                        url: element.url,
+                        code: element.iso_639_1,
+                        time: new Date(element.published_at).getTime(),
+                        url: 'https://www.youtube.com/watch?v=' + element.key,
+                        youtube: true,
+                        icon: '<img class="size-youtube" src="https://img.youtube.com/vi/'+element.key+'/default.jpg" />',
+                        template: 'selectbox_icon'
                     })
-                });
+                })
+
+                items.sort((a,b)=>{
+                    return a.time > b.time ? -1 : a.time < b.time ? 1 : 0
+                })
+
+                let my_lang = items.filter(n=>n.code == Storage.field('tmdb_lang'))
+                let en_lang = items.filter(n=>n.code == 'en' && my_lang.indexOf(n) == -1)
+                let al_lang = []
+
+                if(my_lang.length){
+                    al_lang = al_lang.concat(my_lang)
+                }
+
+                if(al_lang.length && en_lang.length){
+                    al_lang.push({
+                        title: Lang.translate('more'),
+                        separator: true
+                    })
+                }
+
+                al_lang = al_lang.concat(en_lang)
 
                 Select.show({
                     title: Lang.translate('title_trailers'),
-                    items: items,
+                    items: al_lang,
                     onSelect: (a)=>{
                         this.toggle()
 
-                        if(a.player){
-                            Player.play(a)
-                            Player.playlist([a])
-                        } else if(Platform.is('android')){
+                        let playlist = al_lang.filter(v=>!v.separator)
+
+                        Player.play(a)
+                        Player.playlist(playlist)
+
+                        /*
+                        if(Platform.is('android')){
                             Android.openYoutube(a.id)
                         }
-                        else YouTube.play(a.id)
+                        */
                     },
                     onBack: ()=>{
                         Controller.toggle('full_start')

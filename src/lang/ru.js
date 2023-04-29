@@ -567,6 +567,7 @@ export default {
     filter_filtred: 'Фильтр',
     filter_any: 'Любой',
     filter_combinations: 'Комбинации',
+    filter_alt_names: 'Другие названия',
     filter_rating_from: 'от',
     filter_rating_to: 'до',
 
@@ -831,6 +832,8 @@ export default {
     player_normalization_step_medium: 'Среднее',
     player_normalization_step_hight: 'Высокое',
     player_normalization: 'Нормализация',
+    player_youtube_no_played: 'К сожалению, это видео не доступно в вашем регионе, возможно, оно было заблокировано или удалено.',
+    player_youtube_start_play: 'Для начала проигрывания видео, нажмите кнопку "Плей"',
 
     broadcast_open: 'Открыть карточку на другом устройстве',
     broadcast_play: 'Выберите устройство для просмотра',
@@ -858,6 +861,7 @@ export default {
     notice_none: 'У вас еще нет никаких уведомлений, зарегистрируйтесь на сайте <b>www.cub.watch</b>, чтобы следить за новыми сериями и релизами.',
     notice_in_quality: 'В качестве',
     notice_none_account: 'У вас еще нет никаких уведомлений, добавьте сериалы в закладки и ожидайте уведомления о новых сериях.',
+    notice_none_system: 'На данный момент у вас отсутствуют уведомления. Мы обязательно оповестим вас, когда появятся новые уведомления.',
 
     copy_link: 'Копировать ссылку на видео',
     copy_secuses: 'Ссылка скопирована в буфер обмена',
