@@ -1,4 +1,5 @@
 import Favorites from '../utils/favorites'
+import Utils from '../utils/utils'
 
 class Menu{
     constructor(listener){
@@ -36,7 +37,7 @@ class Menu{
             let co = document.createElement('span')
                 
             li.addClass('iptv-menu__list-item selector')
-            li.text(menu.name || Lampa.Lang.translate('iptv_all_channels'))
+            li.text(Utils.clearMenuName(menu.name || Lampa.Lang.translate('iptv_all_channels')))
             co.text(menu.count)
             
             li.append(co)
@@ -57,10 +58,10 @@ class Menu{
                 if(menu.count == 0) return
                 
                 if(menu.favorites){
-                    this.listener.send('icons-load', favorites)
+                    this.listener.send('icons-load', {menu, icons: favorites})
                 }
                 else{
-                    this.listener.send('icons-load', menu.name ? data.playlist.channels.filter(a=>a.group == menu.name) : data.playlist.channels)
+                    this.listener.send('icons-load', {menu, icons: menu.name ? data.playlist.channels.filter(a=>a.group == menu.name) : data.playlist.channels})
                 }
 
                 let active = this.menu.find('.active')

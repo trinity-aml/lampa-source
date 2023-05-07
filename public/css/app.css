@@ -4011,8 +4011,8 @@ body.true--mobile.orientation--portrait .player-video__paused {
   }
 }
 .player-panel-iptv__arrow-up > svg, .player-panel-iptv__arrow-down > svg {
-  width: 1.8em;
-  height: 1.8em;
+  width: 1.8em !important;
+  height: 1.8em !important;
 }
 .player-panel-iptv__arrow-up {
   top: 0;
@@ -4070,7 +4070,7 @@ body.true--mobile.orientation--portrait .player-video__paused {
 }
 .player-panel-iptv-item__left svg,
 .player-panel-iptv-item__left img {
-  width: 45%;
+  width: 45% !important;
   opacity: 0;
   -webkit-transition: opacity 0.2s;
   -o-transition: opacity 0.2s;
@@ -4084,11 +4084,11 @@ body.true--mobile.orientation--portrait .player-video__paused {
 @media screen and (max-width: 480px) {
   .player-panel-iptv-item__left svg,
 .player-panel-iptv-item__left img {
-    width: 75%;
+    width: 75% !important;
   }
 }
 .player-panel-iptv-item__left svg {
-  height: 100%;
+  height: 100% !important;
 }
 @media screen and (max-width: 767px) {
   .player-panel-iptv-item__left {
@@ -6121,6 +6121,39 @@ body.true--mobile .search .search-source:not(.active) {
           border-radius: 0.3em;
   padding: 0.2em 0.5em;
   padding-top: 0em;
+}
+
+.account-add-device {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: column;
+     -moz-box-orient: vertical;
+     -moz-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+     -moz-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  text-align: center;
+}
+.account-add-device__site {
+  background: rgba(0, 0, 0, 0.3);
+  display: inline-block;
+  padding: 0.1em 0.4em;
+  -webkit-border-radius: 0.4em;
+     -moz-border-radius: 0.4em;
+          border-radius: 0.4em;
+  color: #D8C39A;
+}
+.account-add-device .about {
+  margin-bottom: 2em;
 }
 
 .cub-premium {

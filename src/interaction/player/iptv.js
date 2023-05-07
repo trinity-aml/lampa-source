@@ -1,4 +1,6 @@
 import Subscribe from '../../utils/subscribe'
+import Keypad from '../keypad'
+import Panel from './panel'
 
 
 let listener = Subscribe()
@@ -10,6 +12,26 @@ let status = {
     program: false
 }
 
+function init(){
+    Keypad.listener.follow('keydown',(e)=>{
+        if(!playning()) return
+
+        Panel.rewind()
+
+        //PG-
+        if (e.code === 428 || e.code === 34 || e.code === 4 || e.code === 65){
+            prevChannel()
+            playDelay()
+        }
+
+        //PG+
+        if(e.code === 427 || e.code === 33 || e.code === 5|| e.code === 68){
+            nextChannel()
+            playDelay()
+        }
+    })
+}
+
 function start(object){
     status.position_view    = object.position
     status.position_channel = object.position
@@ -18,6 +40,9 @@ function start(object){
     status.channel = channel()
 
     listener.send('channel', {channel: status.channel, dir: 0, position: status.position_view})
+
+    if(status.active.onPlay) status.active.onPlay(status.channel)
+
     listener.send('play', {channel: status.channel, position: status.position_view})
 }
 
@@ -37,8 +62,16 @@ function play(){
         
         status.position_channel = status.position_view
 
+        if(status.active.onPlay) status.active.onPlay(status.channel)
+
         listener.send('play', {channel: status.channel, position: status.position_view})
     }
+}
+
+function playDelay(){
+    clearTimeout(status.timer)
+
+    status.timer = setTimeout(play,2000)
 }
 
 function reset(){
@@ -108,6 +141,8 @@ function drawProgram(container){
 }
 
 function destroy(){
+    clearTimeout(status.timer)
+
     status = {
         active: false,
         channel: false,
@@ -118,6 +153,7 @@ function destroy(){
 
 export default {
     listener,
+    init,
     start,
     playning,
     channel,

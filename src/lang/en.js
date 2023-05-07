@@ -148,6 +148,8 @@ export default {
 
     settings_player_type: 'Player type',
     settings_player_type_descr: 'Which player to play',
+    settings_player_iptv_type: 'Player type for IPTV',
+    settings_player_iptv_type_descr: 'Which player to play IPTV channels',
     settings_player_reset: 'Reset default player',
     settings_player_reset_descr: 'Resets the selected Android player in the application',
     settings_player_path: 'Path to the player',
@@ -843,6 +845,13 @@ export default {
     account_premium: 'Discover more features with a CUB Premium account. Increasing limits and access to additional features of the service.',
     account_premium_more: 'Learn more about CUB Premium',
     account_limited: 'You have reached the maximum limit. Increase the limit with a CUB Premium account. Learn more at <span class="account-modal__site">www.cub.watch/premium</span>',
+
+    account_code_enter: 'Enter a six-digit code',
+    account_code_error: 'Perhaps you entered an incorrect or outdated code',
+    account_code_wrong: 'Perhaps you entered an incorrect format',
+    account_code_where: 'Go to the <span class="account-add-device__site">cub.watch/add</span> website and enter the code provided there.',
+    account_code_input: 'Enter code',
+    settings_cub_signin_button: 'Sign in',
 
     network_noconnect: 'No network connection',
     network_404: 'The requested page was not found. [404]',
