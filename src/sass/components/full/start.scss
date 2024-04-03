@@ -9,11 +9,6 @@
         display: flex;
         flex-wrap: wrap;
         padding-bottom: 2.5em;
-        width: 65%;
-
-        @media screen and (max-width: $media_md) {
-            width: auto;
-        }
     }
 
     &__deta{
@@ -22,7 +17,8 @@
         margin-bottom: 1em;
     }
 
-    &__pg{
+    &__pg,
+    &__status{
         font-size: 1.2em;
         border: 1px solid #fff;
         border-radius: 0.2em;
@@ -40,6 +36,10 @@
 
         @media screen and (max-width: $media_xs) {
             display: block;
+        }
+
+        @media screen and (max-width: $media_sm) {
+            padding-bottom: 0em;
         }
     }
 

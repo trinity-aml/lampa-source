@@ -119,7 +119,7 @@ class Notice{
                         id: element.card.id,
                         method: element.card.number_of_seasons || element.card.seasons ? 'tv' : 'movie',
                         card: element.card,
-                        source: 'cub'
+                        source: Lang.selected(['ru', 'uk', 'be']) ? 'cub' : ''
                     })
                 }
                 else this.listener.send('select',{display: element.display || this.display, element})
@@ -194,7 +194,22 @@ class Notice{
     }
 
     drawCount(){
-        $('.head .notice--icon').toggleClass('active', Boolean(this.count()))
+        let status = Boolean(this.count())
+        let icon   = $('.head .notice--icon')
+
+        icon.toggleClass('active', status)
+
+        clearInterval(this.blick_timer)
+
+        if(status){
+            this.blick_timer = setInterval(()=>{
+                icon.addClass('animate')
+
+                setTimeout(()=>{
+                    icon.removeClass('animate')
+                },1000)
+            },1000*15)
+        }
     }
 
     addClass(class_name, noticeClass){

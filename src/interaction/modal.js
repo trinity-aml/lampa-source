@@ -66,7 +66,13 @@ function open(params){
 
     $('body').append(html)
 
+    max()
+
     toggle(params.select)
+}
+
+function max(){
+    scroll.render().find('.scroll__content').css('max-height',  Math.round(window.innerHeight - scroll.render().offset().top - (window.innerHeight * 0.1)) + 'px')
 }
 
 function buttons(){
@@ -166,6 +172,8 @@ function update(new_html){
     scroll.append(new_html)
 
     bind(new_html)
+
+    max()
 
     toggle(active.select)
 }

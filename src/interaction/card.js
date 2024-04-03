@@ -15,6 +15,7 @@ import Search from '../components/search'
 import Loading from './loading'
 import TmdbApi from '../utils/api/tmdb'
 import ImageCache from '../utils/cache/images'
+import Account from '../utils/account'
 
 /**
  * Карточка
@@ -22,13 +23,16 @@ import ImageCache from '../utils/cache/images'
  * @param {{isparser:boolean, card_small:boolean, card_category:boolean, card_collection:boolean, card_wide:true}} params 
  */
 function Card(data, params = {}){
+    this.data   = data
+    this.params = params
+
     Arrays.extend(data,{
         title: data.name,
         original_title: data.original_name,
         release_date: data.first_air_date 
     })
 
-    data.release_year = ((data.release_date || '0000') + '').slice(0,4)
+    data.release_year = ((data.release_date || data.birthday || '0000') + '').slice(0,4)
 
     function remove(elem){
         if(elem) elem.remove()
@@ -40,6 +44,8 @@ function Card(data, params = {}){
     this.build = function(){
         this.card    = Template.js(params.isparser ? 'card_parser' : 'card',data)
         this.img     = this.card.querySelector('.card__img') || {}
+
+        this.card.card_data = data
 
         if(params.isparser){
             let elem_title   = this.card.querySelector('.card-parser__title')
@@ -219,48 +225,49 @@ function Card(data, params = {}){
         if(!Storage.field('card_episodes')) return
 
         if(!this.watched_checked){
-            let episodes = Timetable.get(data)
-            let viewed
+            Timetable.get(data, (episodes)=>{
+                let viewed
 
-            episodes.forEach(ep=>{
-                let hash = Utils.hash([ep.season_number,ep.episode_number,data.original_title].join(''))
-                let view = Timeline.view(hash)
+                episodes.forEach(ep=>{
+                    let hash = Utils.hash([ep.season_number, ep.season_number > 10 ? ':' : '',ep.episode_number,data.original_title].join(''))
+                    let view = Timeline.view(hash)
 
-                if(view.percent) viewed = {ep, view}
-            })
-
-            if(viewed){
-                let next = episodes.slice(episodes.indexOf(viewed.ep)).filter(ep=>{
-                    let date = Utils.parseToDate(ep.air_date).getTime()
-
-                    return date < Date.now()
-                }).slice(0,5)
-
-                if(next.length == 0) next = [viewed.ep]
-
-                let wrap = Template.js('card_watched',{})
-                    wrap.querySelector('.card-watched__title').innerText = Lang.translate('title_watched')
-
-                next.forEach(ep=>{
-                    let div = document.createElement('div')
-                    let span = document.createElement('span')
-
-                    div.classList.add('card-watched__item')
-                    div.appendChild(span)
-
-                    span.innerText = ep.episode_number+' - '+(ep.name || Lang.translate('noname'))
-
-                    if(ep == viewed.ep) div.appendChild(Timeline.render(viewed.view)[0])
-
-                    wrap.querySelector('.card-watched__body').appendChild(div)
+                    if(view.percent) viewed = {ep, view}
                 })
 
-                this.watched_wrap = wrap
+                if(viewed){
+                    let next = episodes.slice(episodes.indexOf(viewed.ep)).filter(ep=>ep.air_date).filter(ep=>{
+                        let date = Utils.parseToDate(ep.air_date).getTime()
 
-                let view = this.card.querySelector('.card__view')
+                        return date < Date.now()
+                    }).slice(0,5)
 
-                view.insertBefore(wrap, view.firstChild)
-            }
+                    if(next.length == 0) next = [viewed.ep]
+
+                    let wrap = Template.js('card_watched',{})
+                        //wrap.querySelector('.card-watched__title').innerText = Lang.translate('title_watched')
+
+                    next.forEach(ep=>{
+                        let div = document.createElement('div')
+                        let span = document.createElement('span')
+
+                        div.classList.add('card-watched__item')
+                        div.appendChild(span)
+
+                        span.innerText = ep.episode_number+' - '+(ep.name || Lang.translate('noname'))
+
+                        if(ep == viewed.ep) div.appendChild(Timeline.render(viewed.view)[0])
+
+                        wrap.querySelector('.card-watched__body').appendChild(div)
+                    })
+
+                    this.watched_wrap = wrap
+
+                    let view = this.card.querySelector('.card__view')
+
+                    view.insertBefore(wrap, view.firstChild)
+                }
+            })
 
             this.watched_checked = true
         }
@@ -271,6 +278,8 @@ function Card(data, params = {}){
      */
     this.favorite = function(){
         let status = Favorite.check(data)
+        let marker = this.card.querySelector('.card__marker')
+        let marks  = ['look', 'viewed', 'scheduled', 'continued', 'thrown']
 
         this.card.querySelector('.card__icons-inner').innerHTML = ''
 
@@ -278,6 +287,22 @@ function Card(data, params = {}){
         if(status.like) this.addicon('like')
         if(status.wath) this.addicon('wath')
         if(status.history) this.addicon('history')
+
+        let any_marker = marks.find(m=>status[m])
+
+        if(any_marker){
+            if(!marker){
+                marker = document.createElement('div')
+                marker.addClass('card__marker')
+                marker.append(document.createElement('span'))
+
+                this.card.querySelector('.card__view').append(marker)
+            }
+
+            marker.find('span').text(Lang.translate('title_' + any_marker))
+            marker.removeClass(marks.map(m=>'card__marker--' + m).join(' ')).addClass('card__marker--' + any_marker)
+        }
+        else if(marker) marker.remove()
     }
 
     /**
@@ -292,26 +317,46 @@ function Card(data, params = {}){
         let menu_plugins = []
         let menu_favorite = [
             {
-                title: status.book ? Lang.translate('card_book_remove') : Lang.translate('card_book_add'),
-                subtitle: Lang.translate('card_book_descr'),
-                where: 'book'
+                title: Lang.translate('title_book'),
+                where: 'book',
+                checkbox: true,
+                checked: status.book,
             },
             {
-                title: status.like ? Lang.translate('card_like_remove') : Lang.translate('card_like_add'),
-                subtitle: Lang.translate('card_like_descr'),
-                where: 'like'
+                title:  Lang.translate('title_like'),
+                where: 'like',
+                checkbox: true,
+                checked: status.like
             },
             {
-                title: status.wath ? Lang.translate('card_wath_remove') : Lang.translate('card_wath_add'),
-                subtitle: Lang.translate('card_wath_descr'),
-                where: 'wath'
+                title: Lang.translate('title_wath'),
+                where: 'wath',
+                checkbox: true,
+                checked: status.wath
             },
             {
-                title: status.history ? Lang.translate('card_history_remove') : Lang.translate('card_history_add'),
-                subtitle: Lang.translate('card_history_descr'),
-                where: 'history'
+                title: Lang.translate('menu_history'),
+                where: 'history',
+                checkbox: true,
+                checked: status.history
+            },
+            {
+                title: Lang.translate('settings_cub_status'),
+                separator: true
             }
         ]
+
+        let marks = ['look', 'viewed', 'scheduled', 'continued', 'thrown']
+
+        marks.forEach(m=>{
+            menu_favorite.push({
+                title: Lang.translate('title_'+m),
+                where: m,
+                picked: status[m],
+                collect: true,
+                noenter: !Account.hasPremium()
+            })
+        })
 
         
         Manifest.plugins.forEach(plugin=>{
@@ -362,10 +407,19 @@ function Card(data, params = {}){
             onBack: ()=>{
                 Controller.toggle(enabled)
             },
-            onSelect: (a)=>{
+            onCheck: (a)=>{
                 if(params.object) data.source = params.object.source
 
                 if(a.where){
+                    Favorite.toggle(a.where, data)
+
+                    this.favorite()
+                }
+            },
+            onSelect: (a)=>{
+                if(params.object) data.source = params.object.source
+
+                if(a.collect){
                     Favorite.toggle(a.where, data)
 
                     this.favorite()
@@ -374,6 +428,24 @@ function Card(data, params = {}){
                 if(this.onMenuSelect) this.onMenuSelect(a, this.card, data)
 
                 Controller.toggle(enabled)
+            },
+            onDraw: (item, elem)=>{
+                if(elem.collect){
+                    if(!Account.hasPremium()){
+                        let wrap = $('<div class="selectbox-item__lock"></div>')
+                            wrap.append(Template.js('icon_lock'))
+
+                        item.find('.selectbox-item__checkbox').remove()
+
+                        item.append(wrap)
+
+                        item.on('hover:enter',()=>{
+                            Select.close()
+
+                            Account.showCubPremium()
+                        })
+                    }
+                }
             }
         })
     }
@@ -388,6 +460,12 @@ function Card(data, params = {}){
             this.watched()
 
             if(this.onFocus) this.onFocus(this.card, data)
+        })
+
+        this.card.addEventListener('hover:touch',()=>{
+            this.watched()
+
+            if(this.onTouch) this.onTouch(this.card, data)
         })
         
         this.card.addEventListener('hover:hover',()=>{

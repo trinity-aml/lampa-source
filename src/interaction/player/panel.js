@@ -103,9 +103,13 @@ function init(){
                 clearTimeout(timer.hide)
 
                 timer.hide = setTimeout(()=>{
-                    if(TV.playning()) Controller.toggle('player')
+                    if(TV.playning()){
+                        TV.reset()
+
+                        Controller.toggle('player')
+                    } 
                     else if(!Video.video().paused) visible(false)
-                },TV.playning() ? 8000 : 3000)
+                },TV.playning() ? 5000 : 3000)
             }
         }
     })
@@ -153,9 +157,11 @@ function init(){
 
     html.find('.player-panel__settings').on('hover:enter',settings)
 
+    html.find('.player-panel__pip,.player-panel__volume').toggleClass('hide',!Boolean(Platform.is('nw') || Platform.is('browser') || (Platform.is('apple') && !Utils.isPWA())))
+
     html.find('.player-panel__pip').on('hover:enter',()=>{
         listener.send('pip',{})
-    }).toggleClass('hide',!Boolean(Platform.is('nw') || Platform.is('browser') || (Platform.is('apple') && !Utils.isPWA())))
+    })
 
     elems.timeline.attr('data-controller', 'player_rewind')
 
@@ -168,6 +174,14 @@ function init(){
     }).on('click',(e)=>{
         if(DeviceInput.canClick(e.originalEvent) && !Platform.screen('mobile')) listener.send('mouse_rewind',{method: 'click',time: elems.time, percent: percent(e)})
     })
+
+    if(!html.find('.player-panel__volume').hasClass('hide')){
+        html.find('.player-panel__volume-range').val(Storage.get('player_volume','1')).on('input',function(){
+            listener.send('change_volume',{volume: $(this).val()})
+
+            Video.changeVolume($(this).val())
+        })
+    }
 
     let touch
 
@@ -361,6 +375,54 @@ function init(){
     TV.listener.follow('draw-program', program)
 }
 
+function hideRewind(){
+    html.addClass('panel--norewind')
+}
+
+function showParams(){
+    let enabled = Controller.enabled().name
+    let items = []
+
+    items.push({
+        title: Lang.translate('player_tracks'),
+        trigger: elems.tracks,
+        ghost: elems.tracks.hasClass('hide'),
+        noenter: elems.tracks.hasClass('hide')
+    })
+
+    items.push({
+        title: Lang.translate('player_subs'),
+        trigger: elems.subs,
+        ghost: elems.subs.hasClass('hide'),
+        noenter: elems.subs.hasClass('hide')
+    })
+
+    items.push({
+        title: Lang.translate('player_quality'),
+        trigger: elems.quality,
+        ghost: !qualitys,
+        noenter: !qualitys
+    })
+
+    items.push({
+        title: Lang.translate('settings_main_rest'),
+        trigger: html.find('.player-panel__settings')
+    })
+
+    Select.show({
+        title: Lang.translate('title_settings'),
+        items: items,
+        onSelect: (a)=>{
+            Controller.toggle(enabled)
+
+            a.trigger.trigger('hover:enter')
+        },
+        onBack: ()=>{
+            Controller.toggle(enabled)
+        }
+    })
+}
+
 function program(data){
     if(elems.iptv_channel_active){
         let prog = elems.iptv_channel_active.find('.player-panel-iptv-item__prog')
@@ -400,6 +462,12 @@ function channel(data){
             </div>
         </div>
     `)
+
+    if(select.icons){
+        select.icons.forEach(ic=>{
+            new_item.find('.player-panel-iptv-item__name').append($('<div class="player-panel-iptv-item__icons-item">'+ic+'</div>'))
+        })
+    }
 
     let ico = new_item.find('.player-panel-iptv-item__ico')
     let img = ico[0]
@@ -497,6 +565,7 @@ function settings(){
     Select.show({
         title: Lang.translate('title_settings'),
         items,
+        nomark: true,
         onSelect: (a)=>{
             last_settings_action = a.method
 
@@ -732,28 +801,36 @@ function normalName(name){
         },
         up: ()=>{
             TV.prevChannel()
+
             state.start()
         },
         down: ()=>{
             TV.nextChannel()
-            state.start()
-        },
-        right: ()=>{
-            TV.nextProgram()
+
             state.start()
         },
         left: ()=>{
-            TV.prevProgram()
+            condition.visible = true
+
+            TV.openMenu()
+
+            state.start()
+        },
+        right: ()=>{
+            condition.visible = true
+
+            showParams()
+
             state.start()
         },
         enter: ()=>{
             TV.play()
+
             state.start()
         },
-        gone: ()=>{
-            TV.reset()
-        },
         back: ()=>{
+            TV.reset()
+
             Controller.toggle('player')
 
             hide()
@@ -789,11 +866,14 @@ function normalName(name){
 
     Controller.add('player_panel',{
         toggle: ()=>{
-            Controller.collectionSet(render())
-            Controller.collectionFocus(last_panel_focus ? last_panel_focus : $(isTV() ? '.player-panel__next' : '.player-panel__playpause',html)[0],render())
+            if(TV.playning()) Controller.toggle('player_tv')
+            else{
+                Controller.collectionSet(render())
+                Controller.collectionFocus(last_panel_focus ? last_panel_focus : $(isTV() ? '.player-panel__next' : '.player-panel__playpause',html)[0],render())
+            } 
         },
         up: ()=>{
-            isTV() ? Controller.toggle('player') : toggleRewind()
+            isTV() || html.hasClass('panel--norewind') ? Controller.toggle('player') : toggleRewind()
         },
         right: ()=>{
             Navigator.move('right')
@@ -899,7 +979,7 @@ function rewind(){
  * Переключить на контроллер перемотки
  */
 function toggleRewind(){
-    Controller.toggle(isTV() ? 'player_panel' : 'player_rewind')
+    Controller.toggle(isTV() || html.hasClass('panel--norewind') ? 'player_panel' : 'player_rewind')
 }
 
 /**
@@ -1060,6 +1140,7 @@ function destroy(){
     elems.episode.toggleClass('hide',true)
 
     html.toggleClass('panel--paused',false)
+    html.toggleClass('panel--norewind',false)
 }
 
 /**
@@ -1090,5 +1171,7 @@ export default {
     setTranslate,
     updateTranslate,
     visible,
-    visibleStatus
+    visibleStatus,
+    showParams,
+    hideRewind
 }

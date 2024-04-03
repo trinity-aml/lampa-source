@@ -1,6 +1,7 @@
 import Api from '../utils/api'
 import DB from '../utils/db'
 import Item from './item'
+import Pilot from '../utils/pilot'
 
 class Playlist{
     constructor(listener){
@@ -14,29 +15,73 @@ class Playlist{
         this.html.find('.iptv-list__items').append(this.scroll.render(true))
     }
 
+    item(data){
+        let item = new Item(data)
+            item.listener = this.listener
+
+        let elem = item.render()
+
+        elem.on('hover:focus',()=>{
+            this.last = elem
+
+            this.scroll.update(this.last)
+        }).on('hover:hover hover:touch',()=>{
+            this.last = elem
+
+            Navigator.focused(elem)
+        })
+
+        return item
+    }
+
     list(playlist){
         this.scroll.clear()
         this.scroll.reset()
 
         this.html.find('.iptv-list__text').html(Lampa.Lang.translate('iptv_select_playlist_text'))
 
-        playlist.list.reverse().forEach((data)=>{
-            let item = new Item(data)
-                item.listener = this.listener
+        let add = Lampa.Template.js('cub_iptv_list_add_custom')
 
-            let elem = item.render()
+        add.find('.iptv-playlist-item__title').text(Lampa.Lang.translate('iptv_playlist_add_new'))
 
-            elem.on('hover:focus',()=>{
-                this.last = elem
+        add.on('hover:enter',()=>{
+            Lampa.Input.edit({
+                title: Lampa.Lang.translate('iptv_playlist_add_set_url'),
+                free: true,
+                nosave: true,
+                value: ''
+            },(value)=>{
+                if(value){
+                    let data = {
+                        id: Lampa.Utils.uid(),
+                        custom: true,
+                        url: value,
+                        name: ''
+                    }
 
-                this.scroll.update(this.last)
-            }).on('hover:hover hover:touch',()=>{
-                this.last = elem
+                    Lampa.Storage.add('iptv_playlist_custom',data)
 
-                Navigator.focused(elem)
+                    let item = this.item(data)
+
+                    add.parentNode.insertBefore(item.render(), add.nextSibling)
+                }
+
+                Lampa.Controller.toggle('content')
             })
+        })
 
-            this.scroll.append(elem)
+        add.on('hover:focus',()=>{
+            this.last = add
+
+            this.scroll.update(this.last)
+        })
+
+        this.scroll.append(add)
+
+        playlist.list.reverse().forEach((data)=>{
+            let item = this.item(data)
+
+            this.scroll.append(item.render())
         })
 
         this.listener.send('display',this)
@@ -51,8 +96,9 @@ class Playlist{
             Api.list(),
             DB.getDataAnyCase('playlist','active')
         ]).then((result)=>{
+            
             let playlist = result[0]
-            let active = result[1]
+            let active = result[1] || Pilot.notebook('playlist')
 
             if(playlist){
                 if(active){
@@ -66,9 +112,7 @@ class Playlist{
                 else this.list(playlist)
             }
             else this.empty()
-        }).catch((e)=>{
-            this.empty()
-        })
+        }).catch(this.empty.bind(this))
     }
 
     empty(){

@@ -17,6 +17,8 @@ import Storage from '../utils/storage'
 import Utils from '../utils/math'
 import Layer from '../utils/layer'
 import Platform from '../utils/platform'
+import Player from '../interaction/player'
+import Android from '../utils/android'
 
 let components = {
     start: Start,
@@ -57,7 +59,10 @@ function component(object){
         html.append(scroll.render())
 
         Api.full(object,(data)=>{
-            if(data.movie){
+            if(data.movie && data.movie.blocked){
+                this.empty()
+            }
+            else if(data.movie){
                 Lampa.Listener.send('full',{type:'start',object,data})
 
                 this.build('start', data)
@@ -70,7 +75,7 @@ function component(object){
                     let time  = Utils.parseToDate(date).getTime()
                     let plus  = false
 
-                    let cameout = data.episodes.episodes.filter(e=>{
+                    let cameout = data.episodes.episodes.filter(a=>a.air_date).filter(e=>{
                         let air = Utils.parseToDate(e.air_date).getTime()
 
                         if(air <= time) return true
@@ -85,7 +90,7 @@ function component(object){
                         return false
                     })
 
-                    if(cameout.length) this.build('episodes', cameout, {title: data.movie.original_title, season: data.episodes});
+                    this.build('episodes', cameout, {title: data.movie.original_title || data.movie.original_name, season: data.episodes, movie: data.movie});
                 }
 
                 if(data.persons && data.persons.crew && data.persons.crew.length) {
@@ -177,6 +182,9 @@ function component(object){
                 item.onToggle = ()=>{
                     active = items.indexOf(item)
                 }
+                item.onScroll = (e)=>{
+                    scroll.update(e, true)
+                }
 
                 item.create()
 
@@ -208,9 +216,11 @@ function component(object){
 
         active = Math.min(active, items.length - 1)
 
-        items[active].toggle()
+        if(items[active]){
+            items[active].toggle()
 
-        scroll.update(items[active].render())
+            scroll.update(items[active].render())
+        }
     }
 
     this.up = function(){

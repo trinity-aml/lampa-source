@@ -11,6 +11,8 @@ class Details{
         this.play   = this.html.find('.iptv-details__play')
         this.progm  = this.html.find('.iptv-details__program')
 
+        this.progm_image = false
+
         this.empty_html = Lampa.Template.js('cub_iptv_details_empty')
 
         this.listener.follow('details-load',this.draw.bind(this))
@@ -33,15 +35,16 @@ class Details{
             this.progm.text(Lampa.Lang.translate('loading')+'...')
 
             Api.program({
+                name: channel.name,
                 channel_id: channel.id,
-                time: EPG.time(channel)
+                time: EPG.time(channel),
+                tvg: channel.tvg
             }).then((program)=>{
                 if(this.wait_for == channel.name){
                     if(program.length) this.program(channel, program)
                     else this.empty()
                 }
             }).catch((e)=>{
-                console.log(e)
                 this.empty()
             })
         }
@@ -81,24 +84,22 @@ class Details{
         this.progm.empty().append(this.empty_html)
     }
 
-    program(channel, program){
-        if(this.endless) this.endless.destroy()
-
-        this.timeline = false
-
+    buildProgramList(channel, program, params){
         let stime   = EPG.time(channel)
         let start   = EPG.position(channel, program)
         let archive = Utils.hasArchive(channel)
 
-        if(program[start]){
+        if(!params && program[start]){
             this.group(channel, Lampa.Utils.shortText(Utils.clear(program[start].title),50))
         }
 
-        this.endless = new Lampa.Endless((position)=>{
+        return new Lampa.Endless((position)=>{
             if(position >= program.length) return this.endless.to(position-1)
 
             let wrap = document.createElement('div')
             let list = EPG.list(channel, program, 10, position)
+
+            wrap.addClass('iptv-details__list')
 
             list.forEach((elem, index)=>{
                 let item = document.createElement('div')
@@ -106,6 +107,8 @@ class Details{
                 if(elem.type == 'date') item.addClass('iptv-program-date').text(elem.date)
                 else{
                     item.addClass('iptv-program selector')
+
+                    let head, icon_wrap, icon_img, head_body
 
                     let time = document.createElement('div')
                         time.addClass('iptv-program__time').text(Lampa.Utils.parseTime(elem.program.start).time)
@@ -116,7 +119,48 @@ class Details{
                     let title = document.createElement('div')
                         title.addClass('iptv-program__title').text(Utils.clear(elem.program.title))
 
+                    if(elem.program.icon && index == 1){
+                        head      = document.createElement('div')
+                        head_body = document.createElement('div')
+                        icon_wrap = document.createElement('div')
+                        icon_img  = document.createElement('img')
+
+                        head.addClass('iptv-program__head')
+                        head_body.addClass('iptv-program__head-body')
+                        icon_wrap.addClass('iptv-program__icon-wrap')
+                        icon_img.addClass('iptv-program__icon-img')
+
+                        icon_wrap.append(icon_img)
+
+                        head.append(icon_wrap)
+                        head.append(head_body)
+
+                        head_body.append(title)
+
+                        body.append(head)
+
+                        if(this.progm_image && this.progm_image.waiting) this.progm_image.src = ''
+
+                        icon_img.onload = ()=>{
+                            icon_img.waiting = false
+
+                            icon_wrap.addClass('loaded')
+                        }
+
+                        icon_img.error = ()=>{
+                            icon_wrap.addClass('loaded-error')
+
+                            icon_img.src = './img/img_broken.svg'
+                        }
+
+                        icon_img.waiting = true
+                        icon_img.src     = elem.program.icon
+
+                        this.progm_image = icon_img
+                    }
+                    else{
                         body.append(title)
+                    }
                         
                     
                     if(elem.watch){
@@ -128,21 +172,42 @@ class Details{
 
                         timeline.append(div)
 
-                        this.timeline = ()=>{
-                            let percent = EPG.timeline(channel, elem.program)
+                        if(!params){
+                            this.timeline = ()=>{
+                                let percent = EPG.timeline(channel, elem.program)
 
-                            div.style.width = percent + '%'
+                                div.style.width = percent + '%'
 
-                            if(percent == 100){
-                                let next = EPG.position(channel, program)
+                                if(percent == 100){
+                                    let next = EPG.position(channel, program)
 
-                                if(start !== next) this.program(channel, program)
+                                    if(start !== next) this.program(channel, program)
+                                }
                             }
+                        }
+
+                        if(archive){
+                            item.on('hover:enter',()=>{
+                                let data = {
+                                    program: elem.program,
+                                    position: position,
+                                    channel: channel,
+                                    playlist: program.slice(Math.max(0,position - 40), start)
+                                }
+
+                                if(params) params.onPlay(data)
+                                else this.listener.send('play-archive',data)
+                            })
                         }
 
                         item.addClass('played')
 
-                        body.append(timeline)
+                        if(elem.program.icon && head_body){
+                            head_body.append(timeline)
+                        }
+                        else{
+                            body.append(timeline)
+                        }
                     }
 
                     if(index == 1 && elem.program.desc){
@@ -161,14 +226,18 @@ class Details{
 
                         if(elem.program.start > minus && elem.program.stop < stime){
                             item.addClass('archive')
-    
+
                             item.on('hover:enter',()=>{
-                                this.listener.send('play-archive',{
+                                let data = {
                                     program: elem.program,
                                     position: position,
                                     channel: channel,
-                                    timeshift: stime - elem.program.start
-                                })
+                                    timeshift: stime - elem.program.start,
+                                    playlist: program.slice(Math.max(0,position - 40), start)
+                                }
+
+                                if(params) params.onPlay(data)
+                                else this.listener.send('play-archive', data)
                             })
                         }
                     }
@@ -177,13 +246,30 @@ class Details{
                     item.append(body)
                 }
 
-                wrap.addClass('iptv-details__list')
-
                 wrap.append(item)
             })
 
             return wrap
         },{position: start})
+    }
+
+    /**
+     * Программа в плеере
+     */
+
+    playlist(channel, program, params = {}){
+        return this.buildProgramList(channel, program, params)
+    }
+
+    /**
+     * Программа в главном интерфейсе
+     */
+    program(channel, program){
+        if(this.endless) this.endless.destroy()
+
+        this.timeline = false
+
+        this.endless = this.buildProgramList(channel, program)
 
         this.progm.empty().append(this.endless.render())
     }

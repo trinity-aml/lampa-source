@@ -5,7 +5,6 @@
     right: $offset;
     width: 100%;
     background-color: rgba(0,0,0,0.3);
-    opacity: 0;
     transform: translateY(130%);
     transition: transform 0.3s, opacity 0.3s;
     width: auto;
@@ -19,11 +18,11 @@
 
     &.panel--visible{
         transform: translateY(0);
-        opacity: 1
     }
 
     &__body{
         padding: $offset;
+        position: relative;
     }
 
     &__timeline{
@@ -233,6 +232,33 @@
         display: none;
     }
 
+    &__volume{
+        position: relative;
+
+        &-drop{
+            display: none;
+            position: absolute;
+            left: 50%;
+            bottom: 100%;
+            transform: translateX(-50%);
+            padding: 0.3em;
+            border-radius: 0.3em;
+            backdrop-filter: blur(1em);
+        }
+
+        &-range{
+            appearance: slider-vertical;
+            width: 0.5em;
+            height: 8em;
+        }
+
+        &:hover{
+            > div{
+                display: block;
+            }
+        }
+    }
+
     &.panel--paused{
         .player-panel__playpause{
             > div{
@@ -243,6 +269,16 @@
                     display: none;
                 }
             }
+        }
+    }
+
+    &.panel--norewind{
+        .player-panel__timeline,
+        .player-panel__line-one{
+            display: none;
+        }
+        .player-panel__line-two{
+            margin-top: 0;
         }
     }
 }
@@ -365,10 +401,27 @@
         }
     }
 
+    &__icons-item{
+        display: inline-block;
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 100%;
+        padding: 0.2em;
+        margin-left: 0.5em;
+        margin-top: -0.2em;
+        vertical-align: middle;
+        
+        svg,
+        img{
+            width: 0.5em !important;
+            height: 0.5em !important;
+        }
+    }
+
     &__prog{
         display: flex;
         margin-top: 0.4em;
         height: 1.5em;
+        font-size: 1.1em;
     }
 
     &__prog-load{

@@ -24,6 +24,7 @@ let network   = new Reguest()
 let api       = Utils.protocol() + Manifest.cub_domain + '/api/'
 let listener  = Subscribe()
 let start_time = Date.now()
+let user_data
 
 let notice_load = {
     time: 0,
@@ -78,6 +79,10 @@ function init(){
         showProfiles('head')
     })
 
+    network.silent(Utils.protocol() + 'tmdb.'+Manifest.cub_domain+'/blocked',(dcma)=>{
+        window.lampa_settings.dcma = dcma
+    })
+
     setInterval(checkValidAccount, 1000 * 60 * 10)
 
     updateBookmarks(Storage.get('account_bookmarks','[]'))
@@ -92,6 +97,8 @@ function init(){
         getUser()
 
         updateProfileIcon()
+
+        persons()
     })
 }
 
@@ -120,6 +127,9 @@ function checkProfile(call){
             })
         }
     }
+    else{
+        Storage.set('account_user','')
+    }
 }
 
 function checkValidAccount(){
@@ -141,8 +151,25 @@ function updateProfileIcon(){
             img.src = './img/img_load.svg'
         }
 
-        img.src = 'https://cub.watch/img/profiles/' + (account.profile.icon || 'l_1') + '.png'
+        img.src = Utils.protocol() + Manifest.cub_domain + '/img/profiles/' + (account.profile.icon || 'l_1') + '.png'
     }
+}
+
+function persons(secuses, error){
+    let account = Storage.get('account','{}')
+
+    if(account.token && window.lampa_settings.account_use){
+        network.silent(api + 'person/list',(data)=>{
+            Storage.set('person_subscribes_id',data.results.map(a=>a.person_id))
+
+            if(secuses) secuses(data.results)
+        },error ? error : false,false,{
+            headers: {
+                token: account.token
+            }
+        })
+    }
+    else error()
 }
 
 function getUser(){
@@ -150,6 +177,8 @@ function getUser(){
 
     if(account.token && window.lampa_settings.account_use){
         network.silent(api + 'users/get',(result)=>{
+            user_data = result.user
+
             Storage.set('account_user',JSON.stringify(result.user))
         },false,false,{
             headers: {
@@ -159,8 +188,8 @@ function getUser(){
     }
 }
 
-function hasPremium(){
-    let user = Storage.get('account_user','{}')
+function checkPremium(){
+    let user = user_data || Storage.get('account_user','{}')
 
     return user.id ? Utils.countDays(Date.now(), user.premium) : 0
 }
@@ -186,7 +215,13 @@ function timelines(full, visual){
                 }
             }
             else{
-                let viewed = Storage.cache('file_view',10000,{})
+                let name = 'file_view_' + account.profile.id
+
+                if(window.localStorage.getItem(name) === null){
+                    Storage.set(name, Arrays.clone(Storage.cache('file_view',10000,{})))
+                }
+
+                let viewed = Storage.cache(name,10000,{})
 
                 for(let i in result.timelines){
                     let time = result.timelines[i]
@@ -202,7 +237,7 @@ function timelines(full, visual){
                     delete viewed[i].hash
                 }
 
-                Storage.set('file_view', viewed)
+                Storage.set(name, viewed)
             }
             
             Storage.set('timeline_full_update_time',Date.now())
@@ -412,7 +447,8 @@ function addDevice(){
                 free: true,
                 title: Lang.translate('account_code_enter'),
                 nosave: true,
-                value: ''
+                value: '',
+                layout: 'nums'
             },(new_value)=>{
                 let code = parseInt(new_value)
 
@@ -476,10 +512,10 @@ function renderPanel(){
         
         body.find('.settings--account-signin').toggleClass('hide',signed)
         body.find('.settings--account-user').toggleClass('hide',!signed)
-        body.find('.settings--account-premium').toggleClass('selectbox-item--checked',Boolean(hasPremium()))
-        body.find('.settings-param__label').toggleClass('hide',!Boolean(hasPremium()))
+        body.find('.settings--account-premium').toggleClass('selectbox-item--checked',Boolean(checkPremium()))
+        body.find('.settings-param__label').toggleClass('hide',!Boolean(checkPremium()))
 
-        if(!hasPremium()){
+        if(!checkPremium()){
             body.find('.selectbox-item').on('hover:enter',showCubPremium)
         }
 
@@ -490,7 +526,9 @@ function renderPanel(){
             body.find('.settings--account-user-profile .settings-param__value').text(account.profile.name)
 
             body.find('.settings--account-user-out').on('hover:enter',()=>{
-                Storage.set('account',{})
+                Storage.set('account','')
+                Storage.set('account_user','')
+                Storage.set('account_email','')
 
                 Settings.update()
 
@@ -514,45 +552,62 @@ function renderPanel(){
                     ],
                     onSelect: (a)=>{
                         if(a.confirm){
-                            let file = new File([localStorage.getItem('favorite') || '{}'], "bookmarks.json", {
-                                type: "text/plain",
-                            })
+                            let file
 
-                            var formData = new FormData($('<form></form>')[0])
-                                formData.append("file", file, "bookmarks.json")
+                            try{
+                                file = new File([localStorage.getItem('favorite') || '{}'], "bookmarks.json", {
+                                    type: "text/plain",
+                                })
+                            }
+                            catch(e){}
 
-                            let loader = $('<div class="broadcast__scan" style="margin: 1em 0 0 0"><div></div></div>')
+                            if(!file){
+                                try{
+                                    file = new Blob([localStorage.getItem('favorite') || '{}'], {type: 'text/plain'})
+                                    file.lastModifiedDate = new Date()
+                                }
+                                catch(e){
+                                    Noty.show(Lang.translate('account_export_fail'))
+                                }
+                            }
 
-                            body.find('.settings--account-user-sync').append(loader)
+                            if(file){
+                                let formData = new FormData($('<form></form>')[0])
+                                    formData.append("file", file, "bookmarks.json")
 
-                            $.ajax({
-                                url: api + 'bookmarks/sync',
-                                type: 'POST',
-                                data: formData,
-                                async: true,
-                                cache: false,
-                                contentType: false,
-                                enctype: 'multipart/form-data',
-                                processData: false,
-                                headers: {
-                                    token: account.token,
-                                    profile: account.profile.id
-                                },
-                                success: function (j) {
-                                    if(j.secuses){
-                                        Noty.show(Lang.translate('account_sync_secuses'))
+                                let loader = $('<div class="broadcast__scan" style="margin: 1em 0 0 0"><div></div></div>')
 
-                                        update()
+                                body.find('.settings--account-user-sync').append(loader)
+
+                                $.ajax({
+                                    url: api + 'bookmarks/sync',
+                                    type: 'POST',
+                                    data: formData,
+                                    async: true,
+                                    cache: false,
+                                    contentType: false,
+                                    enctype: 'multipart/form-data',
+                                    processData: false,
+                                    headers: {
+                                        token: account.token,
+                                        profile: account.profile.id
+                                    },
+                                    success: function (j) {
+                                        if(j.secuses){
+                                            Noty.show(Lang.translate('account_sync_secuses'))
+
+                                            update()
+
+                                            loader.remove()
+                                        } 
+                                    },
+                                    error: function(){
+                                        Noty.show(Lang.translate('account_export_fail'))
 
                                         loader.remove()
-                                    } 
-                                },
-                                error: function(){
-                                    Noty.show(Lang.translate('account_export_fail'))
-
-                                    loader.remove()
-                                }
-                            })
+                                    }
+                                })
+                            }
                         }
 
                         Controller.toggle('settings_component')
@@ -603,7 +658,7 @@ function showProfiles(controller){
                 items: items.map((elem, index)=>{
                     elem.title    = elem.name
                     elem.template = 'selectbox_icon'
-                    elem.icon     = '<img src="https://cub.watch/img/profiles/'+elem.icon+'.png" />'
+                    elem.icon     = '<img src="' + Utils.protocol() + Manifest.cub_domain +'/img/profiles/'+elem.icon+'.png" />'
                     elem.index    = index
 
                     elem.selected = account.profile.id == elem.id
@@ -741,6 +796,7 @@ function backup(){
     if(account.token){
         Select.show({
             title: Lang.translate('settings_cub_backup'),
+            nomark: true,
             items: [
                 {
                     title: Lang.translate('settings_cub_backup_export'),
@@ -759,6 +815,7 @@ function backup(){
                 if(a.export){
                     Select.show({
                         title: Lang.translate('sure'),
+                        nomark: true,
                         items: [
                             {
                                 title: Lang.translate('confirm'),
@@ -771,44 +828,61 @@ function backup(){
                         ],
                         onSelect: (a)=>{
                             if(a.export){
-                                let file = new File([JSON.stringify(localStorage)], "backup.json", {
-                                    type: "text/plain",
-                                })
+                                let file
 
-                                var formData = new FormData($('<form></form>')[0])
-                                    formData.append("file", file, "backup.json")
+                                try{
+                                    file = new File([JSON.stringify(localStorage)], "backup.json", {
+                                        type: "text/plain",
+                                    })
+                                }
+                                catch(e){}
 
-                                let loader = $('<div class="broadcast__scan" style="margin: 1em 0 0 0"><div></div></div>')
-
-                                body.find('.settings--account-user-backup').append(loader)
-
-                                $.ajax({
-                                    url: api + 'users/backup/export',
-                                    type: 'POST',
-                                    data: formData,
-                                    async: true,
-                                    cache: false,
-                                    contentType: false,
-                                    enctype: 'multipart/form-data',
-                                    processData: false,
-                                    headers: {
-                                        token: account.token
-                                    },
-                                    success: function (j) {
-                                        if(j.secuses){
-                                            if(j.limited) showLimitedAccount()
-                                            else Noty.show(Lang.translate('account_export_secuses'))
-                                        }
-                                        else Noty.show(Lang.translate('account_export_fail'))
-
-                                        loader.remove()
-                                    },
-                                    error: function(){
-                                        Noty.show(Lang.translate('account_export_fail'))
-
-                                        loader.remove()
+                                if(!file){
+                                    try{
+                                        file = new Blob([JSON.stringify(localStorage)], {type: 'text/plain'})
+                                        file.lastModifiedDate = new Date()
                                     }
-                                })
+                                    catch(e){
+                                        Noty.show(Lang.translate('account_export_fail'))
+                                    }
+                                }
+
+                                if(file){
+                                    var formData = new FormData($('<form></form>')[0])
+                                        formData.append("file", file, "backup.json")
+
+                                    let loader = $('<div class="broadcast__scan" style="margin: 1em 0 0 0"><div></div></div>')
+
+                                    body.find('.settings--account-user-backup').append(loader)
+
+                                    $.ajax({
+                                        url: api + 'users/backup/export',
+                                        type: 'POST',
+                                        data: formData,
+                                        async: true,
+                                        cache: false,
+                                        contentType: false,
+                                        enctype: 'multipart/form-data',
+                                        processData: false,
+                                        headers: {
+                                            token: account.token
+                                        },
+                                        success: function (j) {
+                                            if(j.secuses){
+                                                if(j.limited) showLimitedAccount()
+                                                else Noty.show(Lang.translate('account_export_secuses'))
+                                            }
+                                            else Noty.show(Lang.translate('account_export_fail'))
+
+                                            loader.remove()
+                                        },
+                                        error: function(e){
+                                            Noty.show(Lang.translate('account_export_fail_' + (e.responseJSON.code || 500)))
+
+                                            loader.remove()
+                                        }
+                                    })
+                                }
                             }
 
                             Controller.toggle('settings_component')
@@ -954,7 +1028,7 @@ function logoff(data){
     }
 }
 
-export default {
+let Account = {
     listener,
     init,
     working,
@@ -977,8 +1051,17 @@ export default {
     showNoAccount,
     showCubPremium,
     showLimitedAccount,
-    hasPremium,
     logged,
     removeStorage: ()=>{}, //устарело
-    logoff
+    logoff,
+    persons
 }
+
+Object.defineProperty(Account, 'hasPremium', {
+    value: function() {
+       return checkPremium()
+    },
+    writable: false
+})
+
+export default Account

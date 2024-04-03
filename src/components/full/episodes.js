@@ -8,6 +8,7 @@ import Timeline from '../../interaction/timeline'
 import Lang from '../../utils/lang'
 import Platform from '../../utils/platform'
 import Layer from '../../utils/layer'
+import Activity from '../../interaction/activity'
 
 function create(data, params = {}){
     let html,scroll,last
@@ -42,6 +43,24 @@ function create(data, params = {}){
 
         data.forEach((episode,num)=>episode.episode_number = episode.episode_number || num + 1)
 
+        let wath_all = Template.get('full_episode',{
+            name: Lang.translate('more')
+        })
+
+        wath_all.addClass('full-episode--wath-all')
+
+        wath_all.on('hover:enter',()=>{
+            Activity.push({
+                url: '',
+                title: Lang.translate('title_episodes'),
+                component: 'episodes',
+                movie: params.movie,
+                page: 1
+            })
+        })
+
+        scroll.append(wath_all)
+
         data.slice(0,view).forEach(this.append.bind(this))
     }
 
@@ -52,10 +71,12 @@ function create(data, params = {}){
         element.num  = element.episode_number
 
         let episode = Template.get('full_episode',element)
-        let hash    = Utils.hash([element.season_number,element.episode_number,params.title].join(''))
+        let hash    = Utils.hash([element.season_number, element.season_number > 10 ? ':' : '',element.episode_number,params.title].join(''))
         let view    = Timeline.view(hash)
 
-        if(view.percent) episode.find('.full-episode__body').append(Timeline.render(view))
+        episode.append('<div class="full-episode__viewed">' + Template.get('icon_viewed',{},true) + '</div>')
+
+        episode.toggleClass('full-episode--viewed', Boolean(view.percent))
 
         if(element.plus) {
             episode.addClass('full-episode--next')
@@ -73,6 +94,7 @@ function create(data, params = {}){
             }
 
             if(element.still_path) img.src = Api.img(element.still_path,'w300')
+            else if(element.img) img.src = element.img
             else img.src = './img/img_broken.svg'
         })
 
@@ -86,7 +108,7 @@ function create(data, params = {}){
             if(element.overview){
                 Modal.open({
                     title: element.name,
-                    html: $('<div class="about"><div class="selector">'+element.overview+'</div></div>'),
+                    html: $('<div class="about">'+element.overview+'</div>'),
                     onBack: ()=>{
                         Modal.close()
 
@@ -99,6 +121,19 @@ function create(data, params = {}){
                     }
                 })
             }
+        }).on('hover:long',()=>{
+            if(Boolean(view.percent)){
+                view.time = 0
+                view.percent = 0
+            }
+            else{
+                view.time = view.duration * 0.95
+                view.percent = 95
+            }
+
+            Timeline.update(view)
+            
+            episode.toggleClass('full-episode--viewed', Boolean(view.percent))
         })
 
         scroll.append(episode)

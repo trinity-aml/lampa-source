@@ -16,6 +16,15 @@ let html = `<div class="menu">
                 <div class="menu__text">#{menu_main}</div>
             </li>
 
+            <li class="menu__item selector" data-action="feed">
+                <div class="menu__ico">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 0L11.4308 6.56918L18 9L11.4308 11.4308L9 18L6.56918 11.4308L0 9L6.56918 6.56918L9 0Z" fill="currentColor"/>
+                    </svg>
+                </div>
+                <div class="menu__text">#{menu_feed}</div>
+            </li>
+
             <li class="menu__item selector" data-action="movie">
                 <div class="menu__ico">
                     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
@@ -52,6 +61,13 @@ let html = `<div class="menu">
                     </svg>
                 </div>
                 <div class="menu__text">#{menu_tv}</div>
+            </li>
+
+            <li class="menu__item selector" data-action="myperson">
+                <div class="menu__ico">
+                <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" x="0" y="0" viewBox="0 0 20 20" style="enable-background:new 0 0 512 512" xml:space="preserve" class=""><g><clipPath id="a"><path d="M0 0h20v20H0z" fill="currentColor" opacity="1" data-original="#000000" class=""></path></clipPath><g clip-path="url(#a)"><path fill="currentColor" fill-rule="evenodd" d="M10 10c-2.216 0-4.019-1.794-4.019-4S7.783 2 10 2s4.019 1.794 4.019 4-1.802 4-4.019 4zm3.776.673a5.978 5.978 0 0 0 2.182-5.603C15.561 2.447 13.37.348 10.722.042 7.07-.381 3.972 2.449 3.972 6c0 1.89.88 3.574 2.252 4.673C2.852 11.934.39 14.895.004 18.891A1.012 1.012 0 0 0 1.009 20a.99.99 0 0 0 .993-.891C2.404 14.646 5.837 12 10 12s7.596 2.646 7.999 7.109a.99.99 0 0 0 .993.891c.596 0 1.06-.518 1.003-1.109-.386-3.996-2.847-6.957-6.22-8.218z" clip-rule="evenodd" opacity="1" data-original="#000000" class=""></path></g></g></svg>
+                </div>
+                <div class="menu__text">#{title_person}</div>
             </li>
 
             <li class="menu__item selector" data-action="catalog">
@@ -115,38 +131,9 @@ let html = `<div class="menu">
                         M384.967,457.453l-118.85-72.86c-6.229-3.817-14.07-3.798-20.28,0.032l-118.805,73.35V38.69h257.935V457.453z"/>
                     </svg>
                 </div>
-                <div class="menu__text">#{menu_bookmark}</div>
+                <div class="menu__text">#{settings_input_links}</div>
             </li>
 
-            <li class="menu__item selector" data-action="favorite" data-type="like">
-                <div class="menu__ico">
-                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 477.534 477.534" xml:space="preserve">
-                        <path fill="currentColor" d="M438.482,58.61c-24.7-26.549-59.311-41.655-95.573-41.711c-36.291,0.042-70.938,15.14-95.676,41.694l-8.431,8.909
-                            l-8.431-8.909C181.284,5.762,98.662,2.728,45.832,51.815c-2.341,2.176-4.602,4.436-6.778,6.778
-                            c-52.072,56.166-52.072,142.968,0,199.134l187.358,197.581c6.482,6.843,17.284,7.136,24.127,0.654
-                            c0.224-0.212,0.442-0.43,0.654-0.654l187.29-197.581C490.551,201.567,490.551,114.77,438.482,58.61z M413.787,234.226h-0.017
-                            L238.802,418.768L63.818,234.226c-39.78-42.916-39.78-109.233,0-152.149c36.125-39.154,97.152-41.609,136.306-5.484
-                            c1.901,1.754,3.73,3.583,5.484,5.484l20.804,21.948c6.856,6.812,17.925,6.812,24.781,0l20.804-21.931
-                            c36.125-39.154,97.152-41.609,136.306-5.484c1.901,1.754,3.73,3.583,5.484,5.484C453.913,125.078,454.207,191.516,413.787,234.226
-                            z"/>
-                    </svg>
-                </div>
-                <div class="menu__text">#{menu_like}</div>
-            </li>
-
-            <li class="menu__item selector" data-action="favorite" data-type="wath">
-                <div class="menu__ico">
-                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
-                    <path fill="currentColor" d="M347.216,301.211l-71.387-53.54V138.609c0-10.966-8.864-19.83-19.83-19.83c-10.966,0-19.83,8.864-19.83,19.83v118.978
-                       c0,6.246,2.935,12.136,7.932,15.864l79.318,59.489c3.569,2.677,7.734,3.966,11.878,3.966c6.048,0,11.997-2.717,15.884-7.952
-                       C357.766,320.208,355.981,307.775,347.216,301.211z"/>
-                    <path fill="currentColor" d="M256,0C114.833,0,0,114.833,0,256s114.833,256,256,256s256-114.833,256-256S397.167,0,256,0z M256,472.341
-                       c-119.275,0-216.341-97.066-216.341-216.341S136.725,39.659,256,39.659c119.295,0,216.341,97.066,216.341,216.341
-                       S375.275,472.341,256,472.341z"/>
-                    </svg>
-                </div>
-                <div class="menu__text">#{menu_time}</div>
-            </li>
 
             <li class="menu__item selector" data-action="favorite" data-type="history">
                 <div class="menu__ico">

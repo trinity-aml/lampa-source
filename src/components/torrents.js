@@ -39,23 +39,27 @@ function component(object){
     let filter_items = {
         quality: [Lang.translate('torrent_parser_any_one'),'4k','1080p','720p'],
         hdr: [Lang.translate('torrent_parser_no_choice'),Lang.translate('torrent_parser_yes'),Lang.translate('torrent_parser_no')],
+        dv: [Lang.translate('torrent_parser_no_choice'), 'Dolby Vision', 'Dolby Vision TV', Lang.translate('torrent_parser_no')],
         sub: [Lang.translate('torrent_parser_no_choice'),Lang.translate('torrent_parser_yes'),Lang.translate('torrent_parser_no')],
         voice: [],
         tracker: [Lang.translate('torrent_parser_any_two')],
-        year: [Lang.translate('torrent_parser_any_two')]
+        year: [Lang.translate('torrent_parser_any_two')],
+        lang: [Lang.translate('torrent_parser_any_two')]
     }
 
     let filter_translate = {
         quality: Lang.translate('torrent_parser_quality'),
         hdr: 'HDR',
+        dv: 'Dolby Vision',
         sub: Lang.translate('torrent_parser_subs'),
         voice: Lang.translate('torrent_parser_voice'),
         tracker: Lang.translate('torrent_parser_tracker'),
         year: Lang.translate('torrent_parser_year'),
-        season: Lang.translate('torrent_parser_season')
+        season: Lang.translate('torrent_parser_season'),
+        lang:  Lang.translate('title_language_short')
     }
 
-    let filter_multiple = ['quality','voice','tracker','season']
+    let filter_multiple = ['quality','voice','tracker','season','lang']
 
     let sort_translate = {
         Seeders: Lang.translate('torrent_parser_sort_by_seeders'),
@@ -161,7 +165,236 @@ function component(object){
     "Синема УС", "Синта Рурони", "Синхрон", "Советский", "Сокуров", "Солодухин", "Сонотек", "Сонькин", "Союз Видео", "Союзмультфильм", "СПД - Сладкая парочка", "Строев", "СТС", "Студии Суверенного Лепрозория", 
     "Студия «Стартрек»", "KOleso", "Студия Горького", "Студия Колобок", "Студия Пиратского Дубляжа", "Студия Райдо", "Студия Трёх", "Гуртом", "Супербит", "Сыендук", "Так Треба Продакшн", "ТВ XXI век", "ТВ СПб", 
     "ТВ-3", "ТВ6", "ТВИН", "ТВЦ", "ТВЧ 1", "ТНТ", "ТО Друзей", "Толмачев", "Точка Zрения", "Трамвай-фильм", "ТРК", "Уолт Дисней Компани", "Хихидок", "Хлопушка", "Цікава Ідея", "Четыре в квадрате", "Швецов", 
-    "Штамп", "Штейн", "Ю. Живов", "Ю. Немахов", "Ю. Сербин", "Ю. Товбин", "Я. Беллманн","Red Head Sound"]
+    "Штамп", "Штейн", "Ю. Живов", "Ю. Немахов", "Ю. Сербин", "Ю. Товбин", "Я. Беллманн","Red Head Sound", "UKR"]
+
+    let filter_langs = [{
+        title: '#{filter_lang_ru}',
+        code: 'ru'
+    }, {
+        title: '#{filter_lang_uk}',
+        code: 'uk'
+    }, {
+        title: '#{filter_lang_en}',
+        code: 'en'
+    }, {
+        title: '#{filter_lang_be}',
+        code: 'be'
+    }, {
+        title: '#{filter_lang_zh}',
+        code: 'zh|cn'
+    }, {
+        title: '#{filter_lang_ja}', 
+        code: 'ja'
+    }, {
+        title: '#{filter_lang_ko}', 
+        code: 'ko'
+    }, {
+        title: '#{filter_lang_af}',
+        code: 'af'
+    }, {
+        title: '#{filter_lang_sq}',
+        code: 'sq'
+    }, {
+        title: '#{filter_lang_ar}',
+        code: 'ar'
+    }, {
+        title: '#{filter_lang_az}',
+        code: 'az'
+    }, {
+        title: '#{filter_lang_hy}',
+        code: 'hy'
+    }, {
+        title: '#{filter_lang_ba}',
+        code: 'ba'
+    }, {
+        title: '#{filter_lang_bg}',
+        code: 'bg'
+    }, {
+        title: '#{filter_lang_bn}',
+        code: 'bn'
+    }, {
+        title: '#{filter_lang_bs}',
+        code: 'bs'
+    }, {
+        title: '#{filter_lang_ca}',
+        code: 'ca'
+    }, {
+        title: '#{filter_lang_ce}',
+        code: 'ce'
+    }, {
+        title: '#{filter_lang_cs}',
+        code: 'cs'
+    }, {
+        title: '#{filter_lang_da}',
+        code: 'da'
+    }, {
+        title: '#{filter_lang_ka}',
+        code: 'ka'
+    }, {
+        title: '#{filter_lang_de}',
+        code: 'de'
+    }, {
+        title: '#{filter_lang_el}',
+        code: 'el'
+    }, {
+        title: '#{filter_lang_es}',
+        code: 'es'
+    }, {
+        title: '#{filter_lang_et}',
+        code: 'et'
+    }, {
+        title: '#{filter_lang_fa}',
+        code: 'fa'
+    }, {
+        title: '#{filter_lang_fi}',
+        code: 'fi'
+    }, {
+        title: '#{filter_lang_fr}',
+        code: 'fr'
+    }, {
+        title: '#{filter_lang_ga}',
+        code: 'ga'
+    }, {
+        title: '#{filter_lang_gl}',
+        code: 'gl'
+    }, {
+        title: '#{filter_lang_gn}',
+        code: 'gn'
+    }, {
+        title: '#{filter_lang_he}',
+        code: 'he'
+    }, {
+        title: '#{filter_lang_hi}',
+        code: 'hi'
+    }, {
+        title: '#{filter_lang_hr}',
+        code: 'hr'
+    }, {
+        title: '#{filter_lang_hu}',
+        code: 'hu'
+    }, {
+        title: '#{filter_lang_id}',
+        code: 'id'
+    }, {
+        title: '#{filter_lang_is}',
+        code: 'is'
+    }, {
+        title: '#{filter_lang_it}',
+        code: 'it'
+    }, {
+        title: '#{filter_lang_kk}',
+        code: 'kk'
+    }, {
+        title: '#{filter_lang_ks}',
+        code: 'ks'
+    }, {
+        title: '#{filter_lang_ku}',
+        code: 'ku'
+    }, {
+        title: '#{filter_lang_ky}',
+        code: 'ky'
+    }, {
+        title: '#{filter_lang_lt}',
+        code: 'lt'
+    }, {
+        title: '#{filter_lang_lv}',
+        code: 'lv'
+    }, {
+        title: '#{filter_lang_mi}',
+        code: 'mi'
+    }, {
+        title: '#{filter_lang_mk}',
+        code: 'mk'
+    }, {
+        title: '#{filter_lang_mn}',
+        code: 'mn'
+    }, {
+        title: '#{filter_lang_mo}',
+        code: 'mo'
+    }, {
+        title: '#{filter_lang_mt}',
+        code: 'mt'
+    }, {
+        title: '#{filter_lang_no}',
+        code: 'no|nb|nn'
+    }, {
+        title: '#{filter_lang_ne}',
+        code: 'ne'
+    }, {
+        title: '#{filter_lang_nl}',
+        code: 'nl'
+    }, {
+        title: '#{filter_lang_pa}',
+        code: 'pa'
+    }, {
+        title: '#{filter_lang_pl}',
+        code: 'pl'
+    }, {
+        title: '#{filter_lang_ps}',
+        code: 'ps'
+    }, {
+        title: '#{filter_lang_pt}',
+        code: 'pt'
+    }, {
+        title: '#{filter_lang_ro}',
+        code: 'ro'
+    }, {
+        title: '#{filter_lang_si}',
+        code: 'si'
+    }, {
+        title: '#{filter_lang_sk}',
+        code: 'sk'
+    }, {
+        title: '#{filter_lang_sl}',
+        code: 'sl'
+    }, {
+        title: '#{filter_lang_sm}',
+        code: 'sm'
+    }, {
+        title: '#{filter_lang_so}',
+        code: 'so'
+    }, {
+        title: '#{filter_lang_sr}',
+        code: 'sr'
+    }, {
+        title: '#{filter_lang_sv}',
+        code: 'sv'
+    }, {
+        title: '#{filter_lang_sw}',
+        code: 'sw'
+    }, {
+        title: '#{filter_lang_ta}',
+        code: 'ta'
+    }, {
+        title: '#{filter_lang_tg}',
+        code: 'tg'
+    }, {
+        title: '#{filter_lang_th}',
+        code: 'th'
+    }, {
+        title: '#{filter_lang_tk}',
+        code: 'tk'
+    }, {
+        title: '#{filter_lang_tr}',
+        code: 'tr'
+    }, {
+        title: '#{filter_lang_tt}',
+        code: 'tt'
+    }, {
+        title: '#{filter_lang_ur}',
+        code: 'ur'
+    }, {
+        title: '#{filter_lang_uz}',
+        code: 'uz'
+    }, {
+        title: '#{filter_lang_vi}',
+        code: 'vi'
+    }, {
+        title: '#{filter_lang_yi}',
+        code: 'yi'
+    }]
+
+    filter_items.lang = filter_items.lang.concat(filter_langs.map(a=>Lang.translate(a.title)))
     
     scroll.minus(files.render().find('.explorer__files-head'))
 
@@ -248,17 +481,15 @@ function component(object){
     }
 
     this.listEmpty = function(){
-        let em = Template.get('list_empty')
+        let em = Template.get('empty_filter')
         let bn = $('<div class="simple-button selector"><span>'+Lang.translate('filter_clarify')+'</span></div>')
-        let ft = $('<div class="empty__footer"></div>')
 
         bn.on('hover:enter',()=>{
             filter.render().find('.filter--filter').trigger('hover:enter')
         })
 
-        ft.append(bn)
-
-        em.append(ft)
+        em.find('.empty-filter__title').remove()
+        em.find('.empty-filter__buttons').removeClass('hide').append(bn)
 
         scroll.append(em)
     }
@@ -319,8 +550,29 @@ function component(object){
         results.Results = popular.concat(other)
     }
 
+    this.cardID = function(){
+        return object.movie.id + ':' + (object.movie.number_of_seasons ? 'tv' : 'movie')
+    }
+
+    this.getFilterData = function(){
+        let all = Storage.cache('torrents_filter_data',500,{})
+        let cid = this.cardID()
+
+        return all[cid] || Storage.get('torrents_filter','{}') 
+    }
+
+    this.setFilterData = function(filter){
+        let all = Storage.cache('torrents_filter_data',500,{})
+        let cid = this.cardID()
+
+        all[cid] = filter
+
+        Storage.set('torrents_filter_data',all)
+        Storage.set('torrents_filter',filter)
+    }
+
     this.buildFilterd = function(){
-        let need     = Storage.get('torrents_filter','{}')
+        let need     = this.getFilterData()
         let select   = []
 
         let add = (type, title)=>{
@@ -366,6 +618,12 @@ function component(object){
 
                 if(title.indexOf(voice) >= 0){
                     if(filter_items.voice.indexOf(voices[i]) == -1) filter_items.voice.push(voices[i])
+                }
+                
+                if(element.info && element.info.voices){
+                    if(element.info.voices.map(v=>v.toLowerCase()).indexOf(voice) >= 0){
+                        if(filter_items.voice.indexOf(voices[i]) == -1) filter_items.voice.push(voices[i])
+                    }
                 }
             }
 
@@ -416,7 +674,7 @@ function component(object){
         need.tracker = Arrays.removeNoIncludes(Arrays.toArray(need.tracker), filter_items.tracker)
         need.season  = Arrays.removeNoIncludes(Arrays.toArray(need.season), filter_items.season)
 
-        Storage.set('torrents_filter', need)
+        this.setFilterData(need)
 
         select.push({
             title: Lang.translate('torrent_parser_reset'),
@@ -425,8 +683,10 @@ function component(object){
 
         add('quality',Lang.translate('torrent_parser_quality'))
         add('hdr','HDR')
+        add('dv','Dolby Vision')
         add('sub',Lang.translate('torrent_parser_subs'))
         add('voice',Lang.translate('torrent_parser_voice'))
+        add('lang',Lang.translate('title_language_short'))
         add('season', Lang.translate('torrent_parser_season'))
         add('tracker', Lang.translate('torrent_parser_tracker'))
         add('year', Lang.translate('torrent_parser_year'))
@@ -438,7 +698,7 @@ function component(object){
     }
 
     this.selectedFilter = function(){
-        let need   = Storage.get('torrents_filter','{}'),
+        let need   = this.getFilterData(),
             select = []
 
         for(let i in need){
@@ -477,18 +737,20 @@ function component(object){
             }
             else{
                 if(a.reset){
-                    Storage.set('torrents_filter','{}')
+                    this.setFilterData({})
 
                     this.buildFilterd()
                 }
                 else{
-                    let filter_data = Storage.get('torrents_filter','{}')
+                    a.items.forEach(n=>n.checked = false)
+
+                    let filter_data = this.getFilterData()
 
                     filter_data[a.stype] = filter_multiple.indexOf(a.stype) >= 0 ? [] : b.index
 
                     a.subtitle = b.title
 
-                    Storage.set('torrents_filter',filter_data)
+                    this.setFilterData(filter_data)
                 }
             }
 
@@ -498,7 +760,7 @@ function component(object){
         }
 
         filter.onCheck = (type, a, b)=>{
-            let data = Storage.get('torrents_filter','{}'),
+            let data = this.getFilterData(),
                 need = Arrays.toArray(data[a.stype])
 
             if(b.checked && need.indexOf(b.title)) need.push(b.title)
@@ -506,7 +768,7 @@ function component(object){
 
             data[a.stype] = need
 
-            Storage.set('torrents_filter',data)
+            this.setFilterData(data)
 
             a.subtitle = need.length ? need.join(', ') : a.items[0].title
 
@@ -532,11 +794,12 @@ function component(object){
 
         last = scroll.render().find('.torrent-item:eq(0)')[0]
 
-        scroll.update(last)
+        if(last) scroll.update(last)
+        else scroll.reset()
     }
 
     this.filtred = function(){
-        let filter_data = Storage.get('torrents_filter','{}')
+        let filter_data = this.getFilterData()
         let filter_any  = false
 
         for(let i in filter_data){
@@ -559,10 +822,12 @@ function component(object){
 
                 let qua = Arrays.toArray(filter_data.quality),
                     hdr = filter_data.hdr,
+                    dv  = filter_data.dv,
                     sub = filter_data.sub,
                     voi = Arrays.toArray(filter_data.voice),
                     tra = Arrays.toArray(filter_data.tracker),
                     ses = Arrays.toArray(filter_data.season),
+                    lng = Arrays.toArray(filter_data.lang),
                     yer = filter_data.year
 
                 let test = function(search, test_index){
@@ -595,6 +860,7 @@ function component(object){
                         }
                         if(type == 'voice'){
                             let p = filter_items.voice.indexOf(a)
+                            let n = element.info && element.info.voices ? element.info.voices.map(v=>v.toLowerCase()) : []
 
                             if(p == 1){
                                 if(test('дублирован|дубляж|  apple| dub| d[,| |$]|[,|\\s]дб[,|\\s|$]')) any = true
@@ -609,6 +875,16 @@ function component(object){
                                 if(test('любитель|авторский| l1[,| |$]|[,|\\s](ло|ап)[,|\\s|$]')) any = true
                             }
                             else if(test(a.toLowerCase(),true)) any = true
+                            else if(n.length && n.indexOf(a.toLowerCase()) >= 0) any = true
+                        }
+                        if(type == 'lang'){
+                            let p = filter_items.lang.indexOf(a)
+                            let c = filter_langs[p - 1]
+
+                            if(element.languages){                            
+                                if(element.languages.find(l=>l.toLowerCase().slice(0,2) == c.code)) any = true
+                            }
+                            else if(title.indexOf(c.code) >= 0) any = true
                         }
                         if(type == 'tracker'){
                             if(tracker.split(',').find(t=>t.trim().toLowerCase() == a.toLowerCase())) any = true
@@ -644,16 +920,24 @@ function component(object){
                 includes('voice', voi)
                 includes('tracker', tra)
                 includes('season', ses)
+                includes('lang', lng)
 
-                if(hdr){
-                    if(hdr == 1) check('[\\[| ]hdr[10| |\\]|,|$]')
-                    else check('[\\[| ]hdr[10| |\\]|,|$]',true)
-                }
+                if(hdr) check('[\\[| ]hdr[10| |\\]|,|$]',hdr !== 1)
 
-                if(sub){
-                    if(sub == 1)  check(' sub|[,|\\s]ст[,|\\s|$]')
-                    else check(' sub|[,|\\s]ст[,|\\s|$]', true)
+                if(dv == 0){
+                    check(filter_items.dv[dv], dv !== 1)
                 }
+                else if(dv == 1){
+                    check('dolby vision')
+                }
+                else if(dv == 2){
+                    check('dolby vision tv')
+                }
+                else if(dv == 3){
+                    check('dolby vision', dv !== 0 )
+                }                
+
+                if(sub) check(' sub|[,|\\s]ст[,|\\s|$]', sub !== 1)
 
                 if(yer){
                     check(filter_items.year[yer])
@@ -776,6 +1060,67 @@ function component(object){
             })
 
             let item = Template.get('torrent',element)
+
+            if(element.ffprobe){
+                let ffprobe_elem = item.find('.torrent-item__ffprobe')
+                let ffprobe_tags = []
+    
+                let video = element.ffprobe.find(a=>a.codec_type == 'video')
+                let audio = element.ffprobe.filter(a=>a.codec_type == 'audio' && a.tags)
+                let subs  = element.ffprobe.filter(a=>a.codec_type == 'subtitle' && a.tags)
+                let voice = element.info && element.info.voices ? element.info.voices : []
+    
+                if(video) ffprobe_tags.push({media: 'video',value: video.width + 'x' + video.height})
+
+                let is_71 = element.ffprobe.find(a=>a.codec_type == 'audio' && a.channels == 8)
+                let is_51 = element.ffprobe.find(a=>a.codec_type == 'audio' && a.channels == 6)
+
+                if(is_71) ffprobe_tags.push({media: 'channels',value: '7.1'})
+                if(is_51) ffprobe_tags.push({media: 'channels',value: '5.1'})
+
+                audio.forEach(a=>{
+                    let line = []
+                    let lang = (a.tags.language || '').toUpperCase()
+                    let name = a.tags.title || a.tags.handler_name
+
+                    if(lang) line.push(lang)
+                    if(name && lang !== 'ENG'){
+                        let translate = voice.find(v=>name.toLowerCase().indexOf(v.toLowerCase()) >= 0)
+                        
+                        name = translate ? translate : name
+
+                        if(name.toLowerCase().indexOf('dub') >= 0 || name.toLowerCase() == 'd') name = Lang.translate('torrent_parser_voice_dubbing')
+                        
+                        line.push(Utils.shortText(Utils.capitalizeFirstLetter(name),20))
+                    }
+
+                    if(line.length) ffprobe_tags.push({media: 'audio',value: line.join(' - ')})
+                })
+
+                let find_subtitles = []
+
+                subs.forEach(a=>{
+                    let lang = (a.tags.language || '').toUpperCase()
+
+                    if(lang) find_subtitles.push(lang)
+                })
+
+                find_subtitles = find_subtitles.filter((el, pos)=>find_subtitles.indexOf(el) == pos)
+
+                find_subtitles.slice(0,4).forEach(a=>{
+                    ffprobe_tags.push({media: 'subtitle',value: a})
+                })
+
+                if(find_subtitles.length > 4) ffprobe_tags.push({media: 'subtitle',value: '+' + (find_subtitles.length - 4)})
+
+                ffprobe_tags = ffprobe_tags.filter((el, pos)=>ffprobe_tags.map(a=>a.value + a.media).indexOf(el.value + el.media) == pos)
+    
+                ffprobe_tags.forEach(tag=>{
+                    ffprobe_elem.append('<div class="m-'+tag.media+'">'+tag.value+'</div>')
+                })
+    
+                if(ffprobe_tags.length) ffprobe_elem.removeClass('hide')
+            }
 
             if (!bitrate) item.find('.bitrate').remove()
 

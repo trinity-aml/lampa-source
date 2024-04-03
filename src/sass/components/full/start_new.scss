@@ -39,6 +39,10 @@
     &__right{
         flex-grow: 1;
 
+        @media screen and (max-width: $media_sm) {
+            overflow: hidden;
+        }
+
         @media screen and (max-width: $media_xs) {
             margin-left: -$offset;
             margin-right: -$offset;
@@ -96,7 +100,6 @@
 
     &__head {
         color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 1.3em;
         font-size: 1.2em;
 
         span {
@@ -147,12 +150,11 @@
     &__details {
         color: #fff;
         margin: -0.45em;
-        margin-bottom: 2em;
+        margin-bottom: 1em;
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         min-height: 1.9em;
-        width: 80%;
         font-size: 1.1em;
 
         > * {
@@ -161,6 +163,19 @@
 
         @media screen and (max-width: $media_md) {
             width: auto;
+        }
+    }
+
+    &__reactions{
+        display: flex;
+        flex-wrap: wrap;
+        margin: -0.5em;
+        margin-bottom: 1em;
+        min-height: 3.6em;
+        align-items: center;
+
+        > div{
+            padding: 0.5em;
         }
     }
 
@@ -173,8 +188,9 @@
             margin: 0
         }
 
-        > * + *{
-            margin-left: 1em !important;
+        > * {
+            margin-left: 0 !important;
+            margin-right: 1em !important;
         }
 
         .full-start__pg{
@@ -221,6 +237,10 @@
     &__buttons{
         display: flex;
         align-items: center;
+
+        @media screen and (max-width: $media_sm) {
+            overflow: auto;
+        }
 
         .full-start__button:not(.focus) span{
             display: none;

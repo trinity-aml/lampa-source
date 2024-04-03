@@ -49,7 +49,7 @@ function set(need, value){
         },10000)
     }
     else if(need == 'stat') stat(value)
-    else if(need == 'bitrate') elems.stat.text(value)
+    else if(need == 'bitrate') elems.stat.html(value)
 }
 
 function pieces(cache){
@@ -93,7 +93,7 @@ function pieces(cache){
 function stat(url){
     let wait = 0
 
-    elems.stat.text('- / - • - seeds')
+    elems.stat.text('- / - • - ' + Lang.translate('connected_seeds'))
     elems.speed.text('--')
 
     let update = ()=>{
@@ -109,8 +109,8 @@ function stat(url){
         network.timeout(2000)
 
         network.silent(url.replace('preload', 'stat').replace('play', 'stat'), function (data) {
-            elems.stat.text((data.active_peers || 0) + ' / ' + (data.total_peers || 0) + ' • ' + (data.connected_seeders || 0) + ' seeds')
-            elems.speed.text(data.download_speed ? Utils.bytesToSize(data.download_speed * 8, true) + (Storage.get('language') == 'en' ? '' : '/c')  : '0.0')
+            elems.stat.text((data.active_peers || 0) + ' / ' + (data.total_peers || 0) + ' • ' + (data.connected_seeders || 0) + ' ' + Lang.translate('connected_seeds'))
+            elems.speed.text(Utils.bytesToSize(data.download_speed ? data.download_speed * 8 : 0, true))
 
             let hash = url.match(/link=(.*?)\&/)
 

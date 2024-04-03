@@ -46,7 +46,8 @@ import company from '../templates/company'
 import modal_loading from '../templates/modal_loading'
 import modal_pending from '../templates/modal_pending'
 import person_start from '../templates/person/start'
-import empty from '../templates/empty'
+import empty from '../templates/empty/simple'
+import empty_filter from '../templates/empty/filter'
 import notice from '../templates/notice'
 import notice_card from '../templates/notice_card'
 import torrent from '../templates/torrent/item'
@@ -54,6 +55,9 @@ import torrent_file from '../templates/torrent/file'
 import files from '../templates/files'
 import about from '../templates/about'
 import error from '../templates/error'
+import season_episode from '../templates/season/episode'
+import season_episode_rate from '../templates/season/rate'
+import season_info from '../templates/season/info'
 import torrent_noconnect from '../templates/torrent/errors/noconnect'
 import torrent_nocheck from '../templates/torrent/errors/nocheck'
 import torrent_nohash from '../templates/torrent/errors/nohash'
@@ -64,6 +68,7 @@ import search_box from '../templates/search'
 import console from '../templates/console'
 import icon_star from '../templates/icons/star'
 import icon_viewed from '../templates/icons/viewed'
+import icon_lock from '../templates/icons/lock'
 import timeline from '../templates/timeline'
 import timeline_details from '../templates/timeline_details'
 import list_empty from '../templates/list_empty'
@@ -89,6 +94,13 @@ import https from '../templates/https'
 import navigation_bar from '../templates/navigation_bar'
 import head_backward from '../templates/head_backward'
 import account_add_device from '../templates/account_add_device'
+import feed_item from '../templates/feed/item'
+import feed_head from '../templates/feed/head'
+import feed_episode from '../templates/feed/episode'
+import register from '../templates/register'
+import speedtest from '../templates/speedtest'
+import ad_bot from '../templates/ad/bot'
+import ad_video_block from '../templates/ad/video'
 
 let templates = {
     head,
@@ -136,6 +148,7 @@ let templates = {
     modal_pending,
     person_start,
     empty,
+    empty_filter,
     notice,
     notice_card,
     torrent,
@@ -154,6 +167,7 @@ let templates = {
     console,
     icon_star,
     icon_viewed,
+    icon_lock,
     timeline,
     timeline_details,
     list_empty,
@@ -179,7 +193,17 @@ let templates = {
     https,
     navigation_bar,
     head_backward,
-    account_add_device
+    account_add_device,
+    feed_item,
+    feed_head,
+    feed_episode,
+    register,
+    speedtest,
+    season_episode,
+    season_episode_rate,
+    season_info,
+    ad_bot,
+    ad_video_block
 }
 
 let created = {}

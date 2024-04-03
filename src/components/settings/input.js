@@ -20,11 +20,13 @@ function edit(params, call){
 
     input = html.find('.settings-input__input')
 
-    if(Storage.field('keyboard_type') !== 'lampa') input.hide()
+    let lamp = Storage.field('keyboard_type') == 'lampa' || params.keyboard == 'lampa'
 
-    $('body').append(html)
+    if(!lamp) input.hide()
 
-    keyboard = new Keybord()
+    $('body').addClass('keyboard-input--visible').append(html)
+
+    keyboard = new Keybord(params)
 
     keyboard.listener.follow('change',(event)=>{
         input.text(event.value.trim())
@@ -147,6 +149,8 @@ function destroy(){
     keyboard.destroy()
 
     html.remove()
+
+    $('body').removeClass('keyboard-input--visible')
 
     html = null
     keyboard = null

@@ -4,9 +4,10 @@ import Utils from '../utils/math'
 import Progress from '../utils/progress'
 import Arrays from '../utils/arrays'
 import Lang from '../utils/lang'
-
+import Storage from '../utils/storage'
 import TMDB from '../utils/api/tmdb'
 import CUB  from '../utils/api/cub'
+import Manifest from '../utils/manifest'
 
 /**
  * Источники
@@ -34,12 +35,16 @@ function source(params){
 }
 
 function availableDiscovery(){
-    let list = []
+    let list   = []
+    let active = Storage.get('source','tmdb')
 
     for(let key in sources){
         console.log('Api','discovery check:',key, sources[key].discovery ? true : false, typeof sources[key].discovery)
 
-        if(sources[key].discovery) list.push(sources[key].discovery())
+        if(sources[key].discovery) {
+            if (key === active) list.splice(0, 0, sources[key].discovery())
+            else list.push(sources[key].discovery())
+        }
     }
 
     return list
@@ -199,7 +204,7 @@ function favorite(params = {}, oncomplite, onerror){
  * @param {function} onerror 
  */
 function relise(params, oncomplite, onerror){
-    network.silent(Utils.protocol() + 'tmdb.cub.watch?sort=releases&results=20&page='+params.page,oncomplite, onerror)
+    network.silent(Utils.protocol() + 'tmdb.'+Manifest.cub_domain+'?sort=releases&results=20&page='+params.page,oncomplite, onerror)
 }
 
 function partPersons(parts, parts_limit, type){
@@ -218,6 +223,8 @@ function partPersons(parts, parts_limit, type){
             persons.forEach((person_data,index)=>{
                 Arrays.insert(parts,index + parts_limit + (offset * index), (call_inner)=>{
                     person({only_credits: type, id: person_data.id},(result)=>{
+                        if(!result.credits) return call_inner()
+
                         let items = (result.credits[type] || []).filter(m=>m.backdrop_path && m.popularity > 30 && m.vote_count > 20)
 
                         if(type == 'tv') items = items.filter(m=>!(m.genre_ids.indexOf(10767) >= 0 || m.genre_ids.indexOf(10763) >= 0))
@@ -231,7 +238,19 @@ function partPersons(parts, parts_limit, type){
                             else return 0
                         })
 
-                        call_inner({results: items.length > 5 ? items.slice(0,20) : [],nomore: true,title: Lang.translate('title_actor') + ' - ' + person_data.name})
+                        let src  = person_data.profile_path ? TMDB.img(person_data.profile_path,'w90_and_h90_face') : person_data.img || './img/actor.svg'
+
+                        let icon = `<div class="full-person layer--visible full-person--small full-person--loaded">
+                            <div class="full-person__photo">
+                                <img src="${src}">
+                            </div>
+                        
+                            <div class="full-person__body">
+                                <div class="full-person__name">${person_data.name}</div>
+                            </div>
+                        </div>`
+
+                        call_inner({results: items.length > 5 ? items.slice(0,20) : [],nomore: true,title: icon})
                     })
                 })
             })
@@ -260,7 +279,9 @@ function partNext(parts, parts_limit, partLoaded, partEmpty){
                         data = data.concat(more_data)
 
                         partLoaded(data)
-                    }, partEmpty)
+                    }, ()=>{
+                        partLoaded(data)
+                    })
                 }
                 else partLoaded(data)
             }

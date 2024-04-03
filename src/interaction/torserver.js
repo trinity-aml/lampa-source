@@ -1,21 +1,26 @@
 import Storage from '../utils/storage'
 import Utils from '../utils/math'
-import Reguest from '../utils/reguest'
+import Request from '../utils/reguest'
 import Template from './template'
 import Controller from './controller'
 import Modal from './modal'
 import Lang from '../utils/lang'
+import EpisodeParser from './episodes_parser'
+import Arrays from '../utils/arrays'
 
-let network = new Reguest()
+let network = new Request()
 
 function url(){
     let u = ip()
 
-    return u ? Utils.checkHttp(u) : u
+    return u ? Utils.checkEmptyUrl(u) : u
 }
 
 function ip(){
-    return Storage.get(Storage.field('torrserver_use_link') == 'two' ? 'torrserver_url_two' : 'torrserver_url')
+    let one = Storage.get('torrserver_url')
+    let two = Storage.get('torrserver_url_two')
+
+    return Storage.field('torrserver_use_link') == 'two' ? two || one : one || two
 }
 
 function my(success, fail){
@@ -132,74 +137,73 @@ function remove(hash, success, fail){
     network.silent(url()+'/torrents', success, fail, data, {dataType: 'text'})
 }
 
-function parse(file_path, movie, is_file){
-    let path = file_path.toLowerCase()
-    let data = {
-        hash: '',
-        season: 0,
-        episode: 0,
-        serial: movie.number_of_seasons ? true : false
-    }
+function parse(data){
+    let result = EpisodeParser.parse(data)
+        result.hash = Utils.hash(result.hash_string)
 
-    let math = path.match(/s([0-9]+)\.?ep?([0-9]+)/)
+    return result
+}
 
-    if(!math) math = path.match(/s([0-9]{2})([0-9]+)/)
-    if(!math) math = path.match(/[ |\[|(]([0-9]{1,2})x([0-9]+)/)
-    if(!math){
-        math = path.match(/[ |\[|(]([0-9]{1,3}) of ([0-9]+)/)
+function clearFileName(files){
+    let combo = []
 
-        if(math)  math = [0,1,math[1]]
-    } 
-
-    if(!math){
-        math = path.match(/ep?([0-9]+)/)
-
-        if(math) math = [0,0,math[1]]
-    }
-
-    if(is_file){
-        data.hash = Utils.hash(file_path)
-    }
-    else if(math && movie.number_of_seasons){
+    files.forEach(element => {
+        let spl = element.path.split('/')
+        let nam = spl[spl.length - 1].split('.')
         
-        data.season  = parseInt(math[1])
-        data.episode = parseInt(math[2])
+        if(nam.length > 1) nam.pop()
         
-        if(data.season === 0){
-            math = path.match(/s([0-9]+)/)
+        nam = nam.join('.')
+        
+        element.path_human = Utils.pathToNormalTitle(nam, false).trim()
 
-            if(math) data.season = parseInt(math[1])
+        if(spl.length > 1){
+            spl.pop()
+            
+            element.folder_name = Utils.pathToNormalTitle(spl.pop(), false).trim()
+        }
+    })
+
+    if(files.length > 1){
+
+        files.forEach(element => {
+            let spl = element.path_human.split(' ')
+            
+            for (let i = spl.length - 1; i >= 0; i--) {
+                let com = spl.join(' ')
+
+                if(combo.indexOf(com) == -1) combo.push(com)
+
+                spl.pop()
+            }
+        })
+
+        combo.sort((a,b)=>{
+            return a.length > b.length ? -1 : a.length < b.length ? 1 : 0
+        })
+
+        for (let i = combo.length - 1; i >= 0; i--) {
+            let com = combo[i]
+            let len = files.filter(f=>f.path_human.slice(0, com.length) == com).length
+            
+            if(len < files.length) Arrays.remove(combo, com)
         }
 
-        if(data.episode === 0){
-            math = path.match(/ep?([0-9]+)/)
+        files.forEach(element => {
+            for(let i = 0; i < combo.length; i++){
+                let com = combo[i]
+                let inx = element.path_human.indexOf(com)
 
-            if(math) data.episode = parseInt(math[1])
-        }
+                if(inx >= 0 && com !== element.path_human){
+                    element.path_human = element.path_human.slice(com.length).trim()
 
-        if(isNaN(data.season))  data.season  = 0
-        if(isNaN(data.episode)) data.episode = 0
-
-        if(data.season && data.episode){
-            data.hash = Utils.hash([data.season, data.episode, movie.original_title].join(''))
-        }
-        else if(data.episode){
-            data.season = 1
-
-            data.hash = Utils.hash([data.season, data.episode, movie.original_title].join(''))
-        }
-        else{
-            hash = Utils.hash(file_path)
-        }
-    } 
-    else if(movie.original_title && !data.serial){
-        data.hash = Utils.hash(movie.original_title)
+                    break
+                }
+            }
+        })
     }
-    else{
-        data.hash = Utils.hash(file_path)
-    }
 
-    return data
+    return files
 }
 
 function clear(){
@@ -286,5 +290,6 @@ export default {
     connected,
     parse,
     error,
-    cache
+    cache,
+    clearFileName
 }

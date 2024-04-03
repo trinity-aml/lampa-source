@@ -170,7 +170,7 @@ function parseTime(str){
         week: days[current_week],
         day: current_day,
         mouth: months[date.getMonth()],
-        full: current_day + ' ' + months_end[date.getMonth()] + ' ' +  time[3],
+        full: current_day + ' ' + months_end[date.getMonth()] + (new Date().getFullYear() == time[3] ? '' : ' ' +  time[3]) ,
         short: current_day + ' ' + months_end[date.getMonth()],
         briefly: current_day + ' ' + months_end[date.getMonth()] + ' ' + current_time
     }
@@ -189,16 +189,28 @@ function strToTime(str){
     return date.getTime()
 }
 
-function checkHttp(url){
+function checkHttp(url, http_only){
     url = url + ''
-    //url = url.replace(/https:\/\//,'')
-    //url = url.replace(/http:\/\//,'')
 
     if (url.indexOf("http://") == 0 || url.indexOf("https://") == 0) return url
 
-    url = protocol() + url
+    url = (http_only ? 'http://' : protocol()) + url
 
     return url
+}
+
+function checkEmptyUrl(url){
+    url = url + ''
+
+    if (url.indexOf("http://") == 0 || url.indexOf("https://") == 0) return url
+
+    url = (window.location.protocol == 'https:' ? 'https://' : 'http://') + url
+
+    return url
+}
+
+function rewriteIfHTTPS(u){
+    return window.location.protocol == 'https:' ? u.replace(/(http:\/\/|https:\/\/)/g, 'https://') : u
 }
 
 function shortText(fullStr, strLen, separator){
@@ -217,7 +229,7 @@ function shortText(fullStr, strLen, separator){
 }
 
 function protocol(){
-    return window.location.protocol == 'https:' ? 'https://' : 'http://'
+    return window.location.protocol == 'https:' ? 'https://' : (localStorage.getItem('protocol') || 'https') + '://'
 }
 
 
@@ -239,6 +251,8 @@ function putScript(items, complite, error, success, show_logs){
 
             return next()
         }
+
+        u = u.replace('cub.watch', Lampa.Manifest.cub_domain)
 
         if(l) console.log('Script','create:',u)
 
@@ -275,10 +289,12 @@ function putScriptAsync(items, complite, error, success, show_logs){
     function check(){
         p++
 
-        if(p == items.length) complite()
+        if(p == items.length && complite) complite()
     }
 
     function put(u){
+        u = u.replace('cub.watch', Lampa.Manifest.cub_domain)
+        
         if(l) console.log('Script','create:',u)
 
         let s = document.createElement('script')
@@ -351,14 +367,14 @@ function cardImgBackground(card_data){
             return card_data.backdrop_path ? Api.img(card_data.backdrop_path,'w1280') : card_data.background_image ? card_data.background_image : ''
         }
         
-        return card_data.poster_path ? Api.img(card_data.poster_path) : card_data.poster || card_data.img || ''
+        return card_data.poster_path || card_data.profile_path ? Api.img(card_data.poster_path || card_data.profile_path) : card_data.poster || card_data.img || ''
     }
 
     return ''
 }
 
 function cardImgBackgroundBlur(card_data){
-    let uri = card_data.poster_path ? Api.img(card_data.poster_path,'w200') : card_data.poster || card_data.img || ''
+    let uri = card_data.poster_path || card_data.profile_path ? Api.img(card_data.poster_path || card_data.profile_path,'w200') : card_data.poster || card_data.img || ''
     let pos = window.innerWidth > 400 && Storage.field('background_type') == 'poster'
 
     if(Storage.field('background')){
@@ -381,7 +397,7 @@ function stringToHslColor(str, s, l) {
 
 function pathToNormalTitle(path, add_exe = true){
     let name = path.split('.')
-    let exe  = name.pop()
+    let exe  = name[name.length-1]
         name = name.join('.')
 
     return (name + '').replace(/_|\./g, ' ') + (add_exe ? ' <span class="exe">.'+exe+'</span>' : '')
@@ -459,9 +475,11 @@ function imgLoad(image,src,onload, onerror){
 }
 
 function isTouchDevice() {
-    return (('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0) ||
-        (navigator.msMaxTouchPoints > 0))
+    let touch  = 'ontouchstart' in window
+    let points = (navigator.maxTouchPoints > 0 && navigator.maxTouchPoints !== 256) || (navigator.msMaxTouchPoints > 0 && navigator.msMaxTouchPoints !== 256)
+    let win    = navigator.userAgent.toLowerCase().indexOf('windows nt') !== -1
+
+    return touch || (points && !win)
 }
 
 function canFullScreen(){
@@ -472,17 +490,28 @@ function canFullScreen(){
 }
 
 function toggleFullscreen(){
-    let doc  = window.document
-    let elem = doc.documentElement
-
-    let requestFullScreen = elem.requestFullscreen || elem.mozRequestFullScreen || elem.webkitRequestFullScreen || elem.msRequestFullscreen
-    let cancelFullScreen  = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen
-
-    if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-        requestFullScreen.call(elem)
-    }
+     // Check if the User-Agent string contains the word "Tesla"
+    if (navigator.userAgent.indexOf("Tesla") >= 0) {
+        // Get the current domain from the URL
+            const currentDomain = window.location.hostname;
+            
+        // Construct the YouTube redirect URL with the current domain
+        const targetURL = `https://www.youtube.com/redirect?q=${currentDomain}`;
+        // If it's Tesla's browser, redirect to the YouTube URL (which will open the current domain in full-screen, thank you Elon, sarcasm)
+        location.href = targetURL;
+    } 
     else {
-        cancelFullScreen.call(doc)
+        let doc  = window.document
+        let elem = doc.documentElement
+        
+        let requestFullScreen = elem.requestFullscreen || elem.mozRequestFullScreen || elem.webkitRequestFullScreen || elem.msRequestFullscreen
+        let cancelFullScreen  = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen
+        
+        if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+            requestFullScreen.call(elem)
+        } else {
+            cancelFullScreen.call(doc)
+        }
     }
 }
 
@@ -553,6 +582,38 @@ function isPWA(){
     return pwa
 }
 
+function bigNumberToShort(number) {
+    const suffixes = ['', 'K', 'M', 'M']; // Суффиксы для различных форматов
+    const absoluteNumber = Math.abs(number); // Получаем абсолютное значение числа
+    const suffixIndex = Math.floor((absoluteNumber.toFixed(0).length - 1) / 3); // Определение индекса суффикса
+
+    // Проверяем, если число меньше 1000, возвращаем его без изменений
+    if (absoluteNumber < 1000) {
+        return number.toString();
+    }
+
+    // Округление числа и преобразование в строку
+    const roundedNumber = (number / Math.pow(1000, suffixIndex)).toFixed(1).replace('.0','');
+
+    return roundedNumber + suffixes[suffixIndex]; // Возвращаем округленное число с суффиксом
+}
+
+function gup( name, url ) {
+    if (!url) url = location.href
+
+    name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]")
+
+    let regexS  = "[\\?&]"+name+"=([^&#]*)"
+    let regex   = new RegExp( regexS )
+    let results = regex.exec( url )
+
+    return results == null ? null : results[1]
+}
+
+function dcma(media, id){
+    return window.lampa_settings.dcma && window.lampa_settings.dcma.find(a=>a.cat == media && a.id == id)
+}
+
 export default {
     secondsToTime,
     secondsToTimeHuman,
@@ -589,5 +650,10 @@ export default {
     countDays,
     decodePG,
     trigger,
-    isPWA
+    isPWA,
+    bigNumberToShort,
+    rewriteIfHTTPS,
+    checkEmptyUrl,
+    gup,
+    dcma
 }

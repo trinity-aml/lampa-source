@@ -12,6 +12,11 @@ let status = {
     program: false
 }
 
+let numpad = {
+    timer: false,
+    prev: ''
+}
+
 function init(){
     Keypad.listener.follow('keydown',(e)=>{
         if(!playning()) return
@@ -28,6 +33,25 @@ function init(){
         if(e.code === 427 || e.code === 33 || e.code === 5|| e.code === 68){
             nextChannel()
             playDelay()
+        }
+
+        let digid = 0
+
+        if (e.code >= 48 && e.code <= 57)       digid = e.code - 48
+        else if (e.code >= 96 && e.code <= 105) digid = e.code - 96
+
+        if(digid){
+            clearTimeout(numpad.timer)
+
+            numpad.prev += digid
+
+            toChannel(parseInt(numpad.prev))
+
+            numpad.timer = setTimeout(()=>{
+                play()
+
+                numpad.prev = ''
+            },2000)
         }
     })
 }
@@ -118,6 +142,20 @@ function prevChannel(){
     }
 }
 
+function toChannel(num){
+    num = Math.max(1,num)
+
+    if(num <= status.active.total){
+        status.position_view = num - 1
+
+        moveChannel(1)
+    }
+}
+
+function redrawChannel(){
+    moveChannel(0)
+}
+
 function moveProgram(dir){
     if(status.program){
         status.position_program += dir
@@ -140,8 +178,18 @@ function drawProgram(container){
     status.active.onGetProgram(status.select, status.position_program, container)
 }
 
+function playlistProgram(){
+    if(status.active.onPlaylistProgram) status.active.onPlaylistProgram(status.select, status.position_program)
+}
+
+function openMenu(){
+    if(status.active.onMenu) status.active.onMenu(status.select, status.position_program)
+    else if(status.active.onPlaylistProgram) status.active.onPlaylistProgram(status.select, status.position_program)
+}
+
 function destroy(){
     clearTimeout(status.timer)
+    clearTimeout(numpad.timer)
 
     status = {
         active: false,
@@ -166,5 +214,8 @@ export default {
     prevProgram,
     nextProgram,
     drawProgram,
+    playlistProgram,
+    openMenu,
+    redrawChannel,
     destroy
 }

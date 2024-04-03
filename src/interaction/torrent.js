@@ -17,6 +17,9 @@ import Noty from './noty'
 import Account from '../utils/account'
 import Helper from './helper'
 import Lang from '../utils/lang'
+import Loading from './loading'
+import Request from '../utils/reguest'
+import subsrt from "../utils/subsrt/subsrt";
 
 let SERVER = {}
 
@@ -56,7 +59,7 @@ function start(element, movie){
 
     if(movie) SERVER.movie  = movie
 
-    if(!Storage.field('internal_torrclient')){
+    if(Platform.is('android') && !Storage.field('internal_torrclient')){
         Android.openTorrent(SERVER)
 
         if(movie && movie.id) Favorite.add('history', movie, 100)
@@ -75,7 +78,7 @@ function open(hash, movie){
 
     if(movie) SERVER.movie = movie
 
-    if(!Storage.field('internal_torrclient')){
+    if(Platform.is('android') && !Storage.field('internal_torrclient')){
         Android.playHash(SERVER)
 
         if(callback) callback()
@@ -178,20 +181,30 @@ function install(){
 }
 
 function show(files){
-    let plays = files.filter((a)=>{
+    files.sort((a, b)=>{
+        let an = a.path.replace(/\d+/g, (m) => m.length > 3 ? m : ('000' + m).substr(-4))
+        let bn = b.path.replace(/\d+/g, (m) => m.length > 3 ? m : ('000' + m).substr(-4))
+        return an.localeCompare(bn)
+    })
+    let active   = Activity.active(),
+        movie    = active.movie || SERVER.movie || {}
+
+    let plays = Torserver.clearFileName(files.filter((a)=>{
         let exe = a.path.split('.').pop().toLowerCase()
 
         return formats.indexOf(exe) >= 0
-    })
-
-    let active   = Activity.active(),
-        movie    = active.movie || SERVER.movie || {}
+    }))
 
     let seasons  = []
 
     plays.forEach(element => {
-        let info = Torserver.parse(element.path, movie)
-
+        let info = Torserver.parse({
+            movie: movie,
+            files: plays,
+            filename: element.path_human,
+            path:  element.path
+        })
+        
         if(info.serial && info.season && seasons.indexOf(info.season) == -1){
             seasons.push(info.season)
         }
@@ -217,23 +230,75 @@ function show(files){
 function parseSubs(path, files){
     let name  = path.split('/').pop().split('.').slice(0,-1).join('.')
     let index = -1
+    const supportedFormats = subsrt.list()
 
     let subtitles = files.filter((a)=>{
         let short = a.path.split('/').pop()
-        let issub = ['srt','vtt'].indexOf(a.path.split('.').pop().toLowerCase()) >= 0
+        let issub = supportedFormats.indexOf(a.path.split('.').pop().toLowerCase()) >= 0
 
         return short.indexOf(name) >= 0 && issub
     }).map(a=>{
         index++
+        const segments = a.path.split('/')
+        segments.pop() // drop filename
+        const label = segments.slice(1).join(' - ') // drop initial folder and concat the rest
 
         return {
-            label: '',
+            label: label,
             url: Torserver.stream(a.path, SERVER.hash, a.id),
             index: index
         }
     })
 
     return subtitles.length ? subtitles : false
+}
+
+function preload(data, run){
+    let need_preload = Torserver.ip() && data.url.indexOf(Torserver.ip()) > -1 && data.url.indexOf('&preload') > -1
+
+    if(need_preload){
+        let checkout
+        let network = new Request()
+        let first   = true
+
+        Loading.start(()=>{
+            clearInterval(checkout)
+
+            network.clear()
+
+            Loading.stop()
+        })
+
+        let update = ()=>{    
+            network.timeout(2000)
+    
+            network.silent(first ? data.url : data.url.replace('preload', 'stat'), function (res) {
+                let pb = res.preloaded_bytes || 0,
+                    ps = res.preload_size || 0,
+                    sp = res.download_speed ? Utils.bytesToSize(res.download_speed * 8, true) : '0.0'
+                
+                let progress = Math.min(100,((pb * 100) / ps ))
+
+                if(progress >= 95 || isNaN(progress)){
+                    Loading.stop()
+
+                    clearInterval(checkout)
+                    
+                    run()
+                }
+                else{
+                    Loading.setText(Math.round(progress) + '%' + ' - ' + sp)
+                }
+            })
+
+            first = false
+        }
+    
+        checkout = setInterval(update,1000)
+    
+        update()
+    }
+    else run()
 }
 
 function list(items, params){
@@ -243,9 +308,17 @@ function list(items, params){
 
     Lampa.Listener.send('torrent_file',{type:'list_open',items})
 
+    let folder = ''
+
     items.forEach(element => {
         let exe  = element.path.split('.').pop().toLowerCase()
-        let info = Torserver.parse(element.path, params.movie, formats_individual.indexOf(exe) >= 0)
+        let info = Torserver.parse({
+            movie: params.movie,
+            files: items,
+            filename: element.path_human,
+            path:  element.path,
+            is_file: formats_individual.indexOf(exe) >= 0,
+        })
         let view = Timeline.view(info.hash)
         let item
 
@@ -260,10 +333,11 @@ function list(items, params){
         Arrays.extend(element, {
             season: info.season,
             episode: info.episode,
-            title: Utils.pathToNormalTitle(element.path),
+            title: element.path_human,
             size: Utils.bytesToSize(element.length),
             url: Torserver.stream(element.path, SERVER.hash, element.id),
             torrent_hash: SERVER.hash,
+            ffprobe: SERVER.object && SERVER.object.ffprobe ? SERVER.object.ffprobe : false,
             timeline: view,
             air_date: '--',
             img: './img/img_broken.svg',
@@ -274,7 +348,7 @@ function list(items, params){
         if(params.seasons){
             let episodes = params.seasons[info.season]
 
-            element.title = info.episode + ' / ' + Utils.pathToNormalTitle(element.path, false)
+            element.title = (info.episode ? info.episode + ' / ' : '') + element.path_human
             element.fname = element.title
 
             if(episodes){
@@ -292,9 +366,16 @@ function list(items, params){
                 }
             }
 
-            item = Template.get('torrent_file_serial', element)
+            if(info.episode){
+                item = Template.get('torrent_file_serial', element)
 
-            item.find('.torrent-serial__content').append(Timeline.render(view))
+                item.find('.torrent-serial__content').append(Timeline.render(view))
+            }
+            else{
+                item = Template.get('torrent_file', element)
+
+                item.append(Timeline.render(view))
+            }
         }
         else if(items.length == 1 && params.movie && !params.movie.name){
             element.fname = params.movie.title
@@ -323,9 +404,14 @@ function list(items, params){
 
         element.subtitles = parseSubs(element.path, params.files)
 
+        element.title = (element.fname || element.title).replace(/<[^>]*>?/gm, '')
+
         playlist.push(element)
         
         item.on('hover:enter',()=>{
+            //если это андроид, но не андроид, то нефиг смотреть
+            if(navigator.userAgent.toLowerCase().indexOf('android') >= 0 && !Platform.is('android')) return Platform.install('apk')
+
             if(params.movie.id) Favorite.add('history', params.movie, 100)
 
             if (Platform.is('android') && playlist.length > 1){
@@ -342,23 +428,25 @@ function list(items, params){
                 element.playlist = trim_playlist
             }
 
-            Player.play(element)
+            preload(element, ()=>{
+                Player.play(element)
 
-            Player.callback(()=>{
-                Controller.toggle('modal')
+                Player.callback(()=>{
+                    Controller.toggle('modal')
+                })
+
+                Player.playlist(playlist)
+
+                Player.stat(element.url)
+
+                if(callback){
+                    callback()
+            
+                    callback = false
+                }
+
+                Lampa.Listener.send('torrent_file',{type:'onenter',element,item,items})
             })
-
-            Player.playlist(playlist)
-
-            Player.stat(element.url)
-
-            if(callback){
-                callback()
-        
-                callback = false
-            }
-
-            Lampa.Listener.send('torrent_file',{type:'onenter',element,item,items})
         }).on('hover:long',()=>{
             let enabled = Controller.enabled().name
 
@@ -445,6 +533,12 @@ function list(items, params){
 
             img[0].src = img.attr('data-src')
         })
+
+        if(element.folder_name && element.folder_name !== folder){
+            html.append($('<div class="torrnet-folder-name'+(folder ? '' : ' selector')+'">'+element.folder_name+'</div>'))
+
+            folder = element.folder_name
+        }
 
         html.append(item)
 

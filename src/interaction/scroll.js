@@ -49,11 +49,13 @@ function create(params = {}){
         }
     })
     
+    html.Scroll = _self
     
     body.addEventListener('webkitTransitionEnd', ()=>{
         if(Date.now() - call_transition_time > 400) return
 
-        if(Date.now() - call_update_time > 200) scrollEnded()
+        //чет на моей карте выходит 180-190, странно, ну да ладно, поставил 150
+        if(Date.now() - call_update_time > 150) scrollEnded()
     })
 
     if(Platform.screen('tv')){

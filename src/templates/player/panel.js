@@ -25,12 +25,12 @@ let html = `<div class="player-panel">
             </div>
         </div>
 
-        <div class="player-panel__line">
+        <div class="player-panel__line player-panel__line-one">
             <div class="player-panel__timenow"></div>
             <div class="player-panel__timeend"></div>
         </div>
 
-        <div class="player-panel__line">
+        <div class="player-panel__line player-panel__line-two">
             <div class="player-panel__left">
                 <div class="player-panel__prev button selector">
                     <svg width="23" height="24" viewBox="0 0 23 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -128,6 +128,15 @@ let html = `<div class="player-panel">
                     <path d="M7.53735 9.45591C8.06025 9.97881 8.91363 9.97322 9.44343 9.44342C9.97322 8.91362 9.97882 8.06024 9.45592 7.53734L6.93114 5.01257C6.40824 4.48967 5.55486 4.49526 5.02506 5.02506C4.49527 5.55485 4.48967 6.40823 5.01257 6.93113L7.53735 9.45591Z" fill="currentColor"/>
                     <rect x="12" y="14" width="13" height="9" rx="2" fill="currentColor"/>
                     </svg>
+                </div>
+                <div class="player-panel__volume button selector">
+                    <svg width="360" height="480" viewBox="0 0 360 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M145 366.736V123.602L290.343 30.3787C309.644 17.9988 335 31.8587 335 54.789V425.73C335 448.023 310.894 461.98 291.561 450.88L145 366.736Z" stroke="currentColor" stroke-width="45"/>
+                        <path d="M60 134H136V357H60C40.67 357 25 341.33 25 322V169C25 149.67 40.67 134 60 134Z" stroke="currentColor" stroke-width="45"/>
+                    </svg>
+                    <div class="player-panel__volume-drop">
+                        <input type="range" orient="vertical" class="player-panel__volume-range" max="1" min="0" step="0.01" />
+                    </div>
                 </div>
                 <div class="player-panel__settings button selector">
                     <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">

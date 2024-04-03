@@ -3,20 +3,26 @@ import Params from './params'
 
 class Api{
     static network = new Lampa.Reguest()
-    static api_url = 'http://cub.watch/api/iptv/'
+    static api_url = Lampa.Utils.protocol() + Lampa.Manifest.cub_domain + '/api/iptv/'
 
     static get(method){
         return new Promise((resolve, reject)=>{
             let account = Lampa.Storage.get('account','{}')
 
-            if(!account.token) return reject()
+            if(!account.token) return resolve()
 
-            this.network.silent(this.api_url + method,resolve,reject,false,{
+            this.network.silent(this.api_url + method,resolve,resolve,false,{
                 headers: {
                     token: account.token,
                     profile: account.profile.id
                 }
             })
+        })
+    }
+
+    static time(call){
+        this.network.silent(this.api_url + 'time',call,()=>{
+            call({time: Date.now()})
         })
     }
 
@@ -28,7 +34,7 @@ class Api{
 
             this.network.timeout(20000)
 
-            this.network.native(url,(str)=>{
+            this.network.silent(url,(str)=>{
                 let file = new File([str], "playlist.m3u", {
                     type: "text/plain",
                 })
@@ -68,15 +74,18 @@ class Api{
 
     static list(){
         return new Promise((resolve, reject)=>{
-            this.get('list').then(result=>{
-                DB.rewriteData('playlist','list',result)
+            Promise.all([
+                this.get('list'),
+                DB.getDataAnyCase('playlist','list')
+            ]).then(result=>{
+                if(result[0]) DB.rewriteData('playlist','list',result[0])
 
-                resolve(result)
-            }).catch((e)=>{
-                DB.getData('playlist','list').then((result)=>{
-                    result ? resolve(result) : reject()
-                }).catch(reject)
-            })
+                let playlist = result[0] || result[1] || {list: []}
+
+                playlist.list = playlist.list.concat(Lampa.Storage.get('iptv_playlist_custom','[]'))
+
+                resolve(playlist)
+            }).catch(reject)
         })
     }
 
@@ -120,7 +129,9 @@ class Api{
                     this.m3u(data.url).then(secuses).catch(error)
                 }
                 else{
-                    this.get('playlist/' + id).then(secuses).catch(error)
+                    this.get('playlist/' + id).then(secuses).catch(()=>{
+                        this.m3u(data.url).then(secuses).catch(error)
+                    })
                 }
             }).catch(reject)
         })
@@ -128,19 +139,39 @@ class Api{
 
     static program(data){
         return new Promise((resolve, reject)=>{
-            DB.getDataAnyCase('epg', data.channel_id, 60 * 24 * 3).then(epg=>{
-                if(epg) resolve(epg)
-                else{
-                    this.network.timeout(5000)
+            let days     = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3
+            let tvg_id   = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id
+            let tvg_name = data.tvg && data.tvg.name ? data.tvg.name : ''
 
-                    this.network.silent(this.api_url + 'program/'+data.channel_id+'/'+data.time + '?full=true',(result)=>{
-                        DB.rewriteData('epg', data.channel_id, result.program).finally(resolve.bind(resolve, result.program))
-                    },(a)=>{
-                        if(a.status == 500) DB.rewriteData('epg', data.channel_id, []).finally(resolve.bind(resolve, []))
-                        else reject()
+            let loadCUB = ()=>{
+                let id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id
+                
+                this.network.timeout(5000)
+
+                this.network.silent(this.api_url + 'program/'+data.channel_id+'/'+data.time + '?full=true',(result)=>{
+                    DB.rewriteData('epg', id, result.program).finally(resolve.bind(resolve, result.program))
+                },(a)=>{
+                    if(a.status == 500) DB.rewriteData('epg', id, []).finally(resolve.bind(resolve, []))
+                    else reject()
+                })
+            }
+
+            let loadEPG = (id, call)=>{
+                DB.getDataAnyCase('epg', id, 60 * 24 * days).then(epg=>{
+                    if(epg) resolve(epg)
+                    else call()
+                })
+            }
+
+            if(tvg_id){
+                loadEPG(tvg_id, ()=>{
+                    DB.getDataAnyCase('epg_channels', (tvg_name || data.name).toLowerCase()).then(gu=>{
+                        if(gu) loadEPG(gu.id, loadCUB)
+                        else loadCUB()
                     })
-                }
-            })
+                })
+            }
+            else reject()
         })
     }
 }

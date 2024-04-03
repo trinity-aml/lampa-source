@@ -52,6 +52,12 @@ function bind(){
 
         if(element.ghost) item.css('opacity',0.5)
 
+        item.on('hover:focus',(e)=>{
+            scroll.update($(e.target), true)
+
+            if(active.onFocus) active.onFocus(element, e.target)
+        })
+
         if(!element.noenter){
             var goclose = function(){
                 if(!active.nohide) hide()
@@ -61,8 +67,8 @@ function bind(){
                     item.addClass('selected')
                 }
 
-                if(element.onSelect) element.onSelect(element)
-                else if(active.onSelect) active.onSelect(element)
+                if(element.onSelect) element.onSelect(element, item)
+                else if(active.onSelect) active.onSelect(element, item)
             }
 
             item.on('hover:enter', function(){
@@ -71,23 +77,24 @@ function bind(){
 
                     item.toggleClass('selectbox-item--checked', element.checked)
 
-                    if(element.onCheck) element.onCheck(element)
-                    else if(active.onCheck) active.onCheck(element)
+                    if(element.onCheck) element.onCheck(element, item)
+                    else if(active.onCheck) active.onCheck(element, item)
                 }
                 else if(active.onBeforeClose){
                     if(active.onBeforeClose()) goclose()
                 }
                 else goclose()
-            }).on('hover:focus',(e)=>{
-                scroll.update($(e.target), true)
-
-                if(active.onFocus) active.onFocus(element, e.target)
             }).on('hover:long',(e)=>{
                 if(active.onLong) active.onLong(element, e.target)
             })
         }
 
-        if(element.selected) item.addClass('selected');
+        if(element.selected) item.addClass('selected')
+        if(element.picked)   item.addClass('picked')
+        if(active.nomark)    item.addClass('nomark')
+        
+
+        if(active.onDraw) active.onDraw(item, element)
 
         scroll.append(item)
     })

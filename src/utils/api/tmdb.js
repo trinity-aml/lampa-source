@@ -61,14 +61,19 @@ let genres = {
 function url(u, params = {}){
     let ln = [Storage.field('tmdb_lang')]
 
-    if(params.langs) ln = ln.concat(params.langs.filter(n=>n !== ln[0]))
+    if(params.langs) ln = typeof params.langs == 'string' ? [params.langs] : ln.concat(params.langs.filter(n=>n !== ln[0]))
 
     u = add(u, 'api_key='+TMDB.key())
     u = add(u, 'language='+ln.join(','))
 
-    if(params.genres)  u = add(u, 'with_genres='+params.genres)
+    if(params.genres && u.indexOf('with_genres') == -1)  u = add(u, 'with_genres='+params.genres)
     if(params.page)    u = add(u, 'page='+params.page)
     if(params.query)   u = add(u, 'query='+params.query)
+    if(params.keywords)u = add(u, 'with_keywords='+params.keywords)
+    if(params.watch_region) u = add(u, 'watch_region='+params.watch_region)
+    if(params.watch_providers) u = add(u, 'with_watch_providers='+params.watch_providers)
+    if(params.networks) u = add(u, 'with_networks='+params.networks)
+    if(params.sort_by) u = add(u, 'sort_by='+params.sort_by)
 
     if(params.filter){
         for(let i in params.filter){
@@ -123,6 +128,16 @@ function main(params = {}, oncomplite, onerror){
             },call)
         },
         (call)=>{
+            call({
+                results: TimeTable.lately().slice(0,20),
+                title: Lang.translate('title_upcoming_episodes'),
+                nomore: true,
+                cardClass: (_elem, _params)=>{
+                    return new Episode(_elem, _params)
+                }
+            })
+        },
+        (call)=>{
             get('trending/movie/day',params,(json)=>{
                 json.title = Lang.translate('title_trend_day')
 
@@ -151,7 +166,7 @@ function main(params = {}, oncomplite, onerror){
             },call)
         },
         (call)=>{
-            get('tv/popular',params,(json)=>{
+            get('trending/tv/week',params,(json)=>{
                 json.title = Lang.translate('title_popular_tv')
 
                 call(json)
@@ -177,7 +192,7 @@ function main(params = {}, oncomplite, onerror){
 
     genres.movie.forEach(genre=>{
         let event = (call)=>{
-            get('discover/movie/?with_genres='+genre.id,params,(json)=>{
+            get('discover/movie?with_genres='+genre.id,params,(json)=>{
                 json.title = Lang.translate(genre.title.replace(/[^a-z_]/g,''))
 
                 call(json)
@@ -197,7 +212,8 @@ function main(params = {}, oncomplite, onerror){
 }
 
 function category(params = {}, oncomplite, onerror){
-    let show     = ['movie','tv'].indexOf(params.url) > -1 && !params.genres
+    let fullcat  = !(params.genres || params.keywords)
+    let show     = ['movie','tv'].indexOf(params.url) > -1 && fullcat
     let books    = show ? Favorite.continues(params.url) : []
     let recomend = show ? Arrays.shuffle(Recomends.get(params.url)).slice(0,19) : []
     
@@ -233,7 +249,7 @@ function category(params = {}, oncomplite, onerror){
         },
         (call)=>{
             if(params.url == 'movie'){
-                get(params.url+'/now_playing',params,(json)=>{
+                get('discover/' + params.url + '?with_release_type=3',params,(json)=>{
                     json.title = Lang.translate('title_now_watch')
 
                     call(json)
@@ -242,58 +258,97 @@ function category(params = {}, oncomplite, onerror){
             else call()
         },
         (call)=>{
-            get(params.url+'/popular',params,(json)=>{
+            get(params.url == 'movie' ? 'discover/movie' : 'trending/tv/day',params,(json)=>{
                 json.title = Lang.translate('title_popular')
+
+                if(params.url == 'tv'){
+                    json.ad    = 'bot'
+                    json.type  = params.url
+                }
 
                 call(json)
             },call)
         },
         (call)=>{
-            let date = new Date()
-            let nparams = Arrays.clone(params)
-                nparams.filter = {
-                    sort_by: 'release_date.desc',
-                    year: date.getFullYear(),
-                    first_air_date_year: date.getFullYear(),
-                    'vote_average.gte': 7
-                }
-
-            get('discover/'+params.url,nparams,(json)=>{
-                json.filter = nparams.filter
-                json.title  = Lang.translate('title_new')
+            get('discover/' + params.url + '?'+(params.url == 'movie' ? 'primary_release_year' : 'first_air_date_year')+'=' + (new Date().getFullYear() - 1),params,(json)=>{
+                json.title = Lang.translate('title_last_year')
 
                 call(json)
             },call)
+        },
+        (call)=>{
+            let lte = (new Date().getFullYear() - 2) + '-12-31'
+            let gte = (new Date().getFullYear() - 7) + '-01-01'
+            let reg = (params.url == 'movie' ? 'primary_release_date' : 'first_air_date')
+
+            lte = reg + '.lte=' + lte
+            gte = reg + '.gte=' + gte
+
+            get('discover/' + params.url + '?' + lte + '&' + gte,params,(json)=>{
+                json.title = Lang.translate('title_worth_rewatch')
+
+                call(json)
+            },call)
+        },
+        (call)=>{
+            let lte = (new Date().getFullYear() - 2) + '-12-31'
+            let gte = (new Date().getFullYear() - 7) + '-01-01'
+            let reg = (params.url == 'movie' ? 'primary_release_date' : 'first_air_date')
+
+            lte = reg + '.lte=' + lte
+            gte = reg + '.gte=' + gte
+
+            get('discover/' + params.url + '?' + lte + '&' + gte + '&vote_average.gte=8&vote_average.lte=9',params,(json)=>{
+                json.title = Lang.translate('title_hight_voite')
+
+                call(json)
+            },call)
+        },
+        (call)=>{
+            if(params.genres) return call()
+
+            if(params.url == 'tv'){
+                get('trending/tv/week',params,(json)=>{
+                    json.title = Lang.translate('title_this_week')
+    
+                    call(json)
+                },call)
+            }
+            else{
+                get('movie/upcoming',params,(json)=>{
+                    json.title = Lang.translate('title_upcoming')
+
+                    json.small = true
+                    json.wide = true
+
+                    json.results.forEach(card=>{
+                        card.promo = card.overview
+                        card.promo_title = card.title || card.name
+                    })
+    
+                    call(json)
+                },call)
+            }
         }
     ]
 
-    if(!params.genres) Arrays.insert(parts_data,0,Api.partPersons(parts_data, parts_limit, params.url))
+    if(fullcat) Arrays.insert(parts_data,0,Api.partPersons(parts_data, parts_limit, params.url))
 
-    if(params.url == 'tv'){
+    genres[params.url].forEach(genre=>{
+        let gen = params.genres ? [].concat(params.genres, genre.id) : [genre.id]
+
+        if(params.genres && params.genres == genre.id) return
+
         let event = (call)=>{
-            get(params.url+'/airing_today',params,(json)=>{
-                json.title = Lang.translate('title_this_week')
+            get('discover/' + params.url+'?with_genres='+gen.join(','),params,(json)=>{
+                json.title = Lang.translate(genre.title.replace(/[^a-z_]/g,''))
 
                 call(json)
             },call)
         }
 
         parts_data.push(event)
-    }
-
-    if(!params.genres){
-        genres[params.url].forEach(genre=>{
-            let event = (call)=>{
-                get('discover/' + params.url+'/?with_genres='+genre.id,params,(json)=>{
-                    json.title = Lang.translate(genre.title.replace(/[^a-z_]/g,''))
-
-                    call(json)
-                },call)
-            }
-
-            parts_data.push(event)
-        })
-    }
+    })
 
     function loadPart(partLoaded, partEmpty){
         Api.partNext(parts_data, parts_limit, partLoaded, partEmpty)
@@ -305,10 +360,12 @@ function category(params = {}, oncomplite, onerror){
 }
 
 function full(params = {}, oncomplite, onerror){
-    let status = new Status(7)
+    let status = new Status(8)
         status.onComplite = oncomplite
 
-    get(params.method+'/'+params.id+'?append_to_response=content_ratings,release_dates,external_ids',params,(json)=>{
+    if(Utils.dcma(params.method, params.id)) return onerror()
+
+    get(params.method+'/'+params.id+'?append_to_response=content_ratings,release_dates,external_ids,keywords',params,(json)=>{
         json.source = 'tmdb'
 
         if(json.external_ids){
@@ -352,12 +409,36 @@ function full(params = {}, oncomplite, onerror){
         status.append('simular', json)
     },status.error.bind(status))
 
-    let video_params = Arrays.clone(params)
-        video_params.langs = ['en']
-
-    get(params.method+'/'+params.id+'/videos',video_params,(json)=>{
+    videos(params, (json)=>{
         status.append('videos', json)
     },status.error.bind(status))
+
+    Api.sources.cub.reactionsGet(params,(json)=>{
+        status.append('reactions', json)
+    })
+}
+
+function videos(params = {}, oncomplite, onerror){
+    let lg = Storage.field('tmdb_lang')
+    let status = new Status(lg == 'en' ? 1 : 2)
+        status.onComplite = (res)=>{
+            let data = []
+
+            if(res.one && res.one.results.length) data = data.concat(res.one.results)
+            if(res.two && res.two.results.length) data = data.concat(res.two.results)
+
+            oncomplite({results: data})
+        }
+
+    get(params.method+'/'+params.id+'/videos',{langs: Storage.field('tmdb_lang')},(json)=>{
+        status.append('one', json)
+    },status.error.bind(status))
+
+    if(lg !== 'en'){
+        get(params.method+'/'+params.id+'/videos',{langs: 'en'},(json)=>{
+            status.append('two', json)
+        },status.error.bind(status))
+    }
 }
 
 function list(params = {}, oncomplite, onerror){
@@ -454,25 +535,11 @@ function person(params = {}, oncomplite, onerror){
             return result
         }
         else{
-            let title_production = Lang.translate('full_production'),
-                title_directing  = Lang.translate('full_directing'),
-                title_writing =  Lang.translate('full_writing')
+            let department = ['directing','writing','editing','creator']
 
-                credits.crew.forEach((a) => {
-                  switch (a.department) {
-                    case "Production":
-                      a.department = title_production;
-                      break;
-                    case "Directing":
-                      a.department = title_directing;
-                      break;
-                    case "Writing":
-                      a.department = title_writing;
-                      break;
-                    default:
-                      break;
-                  }
-                });
+            credits.crew.forEach((a) => {
+                a.department = Lang.translate(department.indexOf(a.department.toLowerCase()) == -1 ? 'settings_main_rest' : 'full_' + a.department.toLowerCase())
+            })
 
             let cast  = sortCredits(credits.cast),
                 crew  = sortCredits(credits.crew),
@@ -484,9 +551,8 @@ function person(params = {}, oncomplite, onerror){
             //1. Группируем все работы по департаментам (Актер, Режиссер, Сценарист и т.д.)
             knownFor = Arrays.groupBy(crew, 'department')
 
-            let actorGender = person_data.gender === 1 ? Lang.translate('title_actress') : Lang.translate('title_actor');
-            if(movie.length > 0) knownFor[`${actorGender} - ` + Lang.translate('menu_movies')] = movie;
-            if(tv.length > 0) knownFor[`${actorGender} - ` + Lang.translate('menu_tv')] = tv;
+            if(movie.length > 0) knownFor[Lang.translate('menu_movies')] = movie;
+            if(tv.length > 0) knownFor[Lang.translate('menu_tv')] = tv;
 
             //2. Для каждого департамента суммируем кол-ва голосов (вроде бы сам TMDB таким образом определяет knownFor для людей)
             knownFor = Object.entries(knownFor).map(([depIdx, dep]) => {
@@ -500,7 +566,7 @@ function person(params = {}, oncomplite, onerror){
                     vote_count: dep.reduce((a, b) => a + b.vote_count, 0)
                 }
             //3. Сортируем департаменты по кол-ву голосов
-            }).sort((a, b) => b.vote_count - a.vote_count);
+            }).sort((a, b) => b.credits.length - a.credits.length);
 
             return {
                 raw: credits, cast, crew, tv, movie, knownFor
@@ -944,6 +1010,19 @@ function parseCountries(movie){
     }) : ''
 }
 
+function getGenresNameFromIds(card_type, ids){
+    let finded = []
+    let where  = genres[card_type]
+    
+    ids.forEach(a=>{
+        let find = where.find(i=>i.id == a)
+
+        if(find) finded.push(Utils.capitalizeFirstLetter(Lang.translate(find.title)))
+    })
+
+    return finded
+}
+
 function clear(){
     network.clear()
 }
@@ -968,5 +1047,7 @@ export default {
     parsePG,
     parseCountries,
     genres,
-    external_imdb_id
+    external_imdb_id,
+    getGenresNameFromIds,
+    videos
 }

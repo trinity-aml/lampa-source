@@ -14,6 +14,7 @@ import DeviceInput from '../../utils/device_input'
 import Orsay from './orsay'
 import YouTube from './youtube'
 import TV from './iptv'
+import AD from '../ad/player'
 
 let listener = Subscribe()
 let html
@@ -208,13 +209,13 @@ function bind(){
 
         if(msg.indexOf('EMPTY SRC') == -1){
             if(error.code == 3){
-                listener.send('error', {error: Lang.translate('player_error_one')})
+                listener.send('error', {error: Lang.translate('player_error_one'), fatal: true})
             }
             else if(error.code == 4){
-                listener.send('error', {error: Lang.translate('player_error_two')})
+                listener.send('error', {error: Lang.translate('player_error_two'), fatal: true})
             }
             else if(typeof error.code !== 'undefined'){
-                listener.send('error', {error: 'code ['+error.code+'] details ['+msg+']'})
+                listener.send('error', {error: 'code ['+error.code+'] details ['+msg+']', fatal: true})
             }
         } 
     })
@@ -229,17 +230,20 @@ function bind(){
             let seconds  = 0
 
             if (duration > 0) {
-                for (let i = 0; i < video.buffered.length; i++) {
-                    if (video.buffered.start && video.buffered.start(video.buffered.length - 1 - i) < video.currentTime) {
-                        let down = Math.max(0,Math.min(100,(video.buffered.end(video.buffered.length - 1 - i) / duration) * 100)) + "%";
+                try{
+                    for (let i = 0; i < video.buffered.length; i++) {
+                        if (video.buffered.start && video.buffered.start(video.buffered.length - 1 - i) < video.currentTime) {
+                            let down = Math.max(0,Math.min(100,(video.buffered.end(video.buffered.length - 1 - i) / duration) * 100)) + "%";
 
-                        seconds = Math.max(0,video.buffered.end(video.buffered.length - 1 - i) - video.currentTime)
+                            seconds = Math.max(0,video.buffered.end(video.buffered.length - 1 - i) - video.currentTime)
 
-                        listener.send('progress', {down: down})
+                            listener.send('progress', {down: down})
 
-                        break
+                            break
+                        }
                     }
                 }
+                catch(e){}
 
                 hlsBitrate(seconds)
             }
@@ -296,6 +300,7 @@ function bind(){
     //получены первые данные
     video.addEventListener('loadeddata', function (e) {
         listener.send('videosize',{width: video.videoWidth, height: video.videoHeight})
+        listener.send('loadeddata',{})
 
         scale()
 
@@ -304,16 +309,18 @@ function bind(){
         loaded()
     })
 
+    let pc = Boolean(Platform.is('nw') || Platform.is('browser') || (Platform.is('apple') && !Utils.isPWA()))
+
     // для страховки
-    video.volume = 1
+    video.volume = pc ? parseFloat(Storage.get('player_volume','1')) : 1
     video.muted  = false
 }
 
 function hlsBitrate(seconds) {
-    if (hls && hls.streamController && hls.streamController.fragPlaying && hls.streamController.fragPlaying.baseurl) {
-        let ch = Lang.translate('title_channel') + ' ' + parseFloat(hls.streamController.fragLastKbps / 1024).toFixed(2) + ' Mbs'
-        let bt = ' / ' + Lang.translate('torrent_item_bitrate') + ' ~' + parseFloat(hls.streamController.fragPlaying.stats.total / 1000000 / 10 * 8).toFixed(2) + ' Mbs'
-        let bf = ' / ' + Lang.translate('title_buffer') + ' '+Utils.secondsToTimeHuman(seconds)
+    if (hls && hls.streamController && hls.streamController.fragPlaying && hls.streamController.fragPlaying.baseurl && hls.streamController.fragPlaying.stats) {
+        let ch = Lang.translate('title_channel') + ' ' + parseFloat(hls.streamController.fragLastKbps / 1000).toFixed(2) + ' ' + Lang.translate('speed_mb')
+        let bt = ' &nbsp;•&nbsp; ' + Lang.translate('torrent_item_bitrate') + ' ~' + parseFloat(hls.streamController.fragPlaying.stats.total / 1000000 / 10 * 8).toFixed(2) + ' ' + Lang.translate('speed_mb')
+        let bf = ' &nbsp;•&nbsp; ' + Lang.translate('title_buffer') + ' ' + Utils.secondsToTimeHuman(seconds)
 
         Lampa.PlayerInfo.set('bitrate', ch + bt + bf)
     }
@@ -879,11 +886,15 @@ function loader(status){
 
     if(/\.mpd/.test(src) && typeof dashjs !== 'undefined'){
         try{
-            dash = dashjs.MediaPlayer().create()
+            if(Platform.is('orsay') && Storage.field('player') == 'orsay')
+                {load(src)}
+            else{
+                dash = dashjs.MediaPlayer().create()
 
-            dash.getSettings().streaming.abr.autoSwitchBitrate = false
+                dash.getSettings().streaming.abr.autoSwitchBitrate = false
 
-            dash.initialize(video, src, true)
+                dash.initialize(video, src, true)
+            }
         }
         catch(e){
             console.log('Player','Dash error:', e.stack)
@@ -899,6 +910,8 @@ function loader(status){
 
             //если это плеер тайзен, то используем только системный
             if(Platform.is('tizen') && Storage.field('player') == 'tizen') use_program = false
+            //если это плеер orsay, то используем только системный
+            else  if(Platform.is('orsay') && Storage.field('player') == 'orsay') use_program = false
             //а если системный и m3u8 не поддерживается, то переключаем на программный
             else if(!use_program && !video.canPlayType('application/vnd.apple.mpegurl')) use_program = true
 
@@ -920,17 +933,17 @@ function loader(status){
                             load(src)
                         }
                         else{
-                            listener.send('error', {error: 'details ['+data.details+'] fatal ['+data.fatal+']'})
+                            listener.send('error', {error: 'details ['+data.details+'] fatal ['+data.fatal+']', fatal: data.fatal})
                         }
                     }
                     else{
-                        listener.send('error', {error: 'details ['+data.details+'] fatal ['+data.fatal+']'})
+                        listener.send('error', {error: 'details ['+data.details+'] fatal ['+data.fatal+']', fatal: data.fatal})
                     }
                 })
                 hls.on(Hls.Events.MANIFEST_LOADED, function(){
                     play()
                 })
-                hls.on(Hls.Events.MANIFEST_PARSED, function(){
+                hls.on(Hls.Events.MANIFEST_PARSED, function(event, data){
                     hls.currentLevel = hlsLevelDefault(hls)
                 })
             }
@@ -999,6 +1012,8 @@ function load(src){
 
     video.src = src
 
+    console.log('Player','video load url:', src)
+
     video.load()
 
     play()
@@ -1008,6 +1023,8 @@ function load(src){
  * Играем
  */
 function play(){
+    if(AD.launched()) return
+    
     var playPromise;
 
     try{
@@ -1196,6 +1213,12 @@ function togglePictureInPicture(){
     else enterToPIP()
 }
 
+function changeVolume(volume){
+    video.volume = volume
+
+    Storage.set('player_volume',volume)
+}
+
 /**
  * Уничтожить
  * @param {boolean} type - сохранить с параметрами
@@ -1295,5 +1318,6 @@ export default {
     clearParamas,
     setParams,
     normalizationVisible,
-    togglePictureInPicture
+    togglePictureInPicture,
+    changeVolume
 }

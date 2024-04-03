@@ -1,6 +1,11 @@
 import Storage from './storage'
 import Manifest from './manifest'
 import Utils from './math'
+import Orsay from './orsay'
+import Modal from '../interaction/modal'
+import Template from '../interaction/template'
+import Controller from '../interaction/controller'
+import Lang from './lang'
 
 function init(){
     let agent = navigator.userAgent.toLowerCase()
@@ -21,11 +26,19 @@ function init(){
         tizen.tvinputdevice.registerKey("MediaPause");
         tizen.tvinputdevice.registerKey("MediaRewind");
         tizen.tvinputdevice.registerKey("MediaFastForward");
+        tizen.tvinputdevice.registerKey("ChannelUp");
+        tizen.tvinputdevice.registerKey("ChannelDown");
     }
     else if(agent.indexOf("lampa_client") > -1){
         Storage.set('platform', 'android')
     }
-    else if(agent.indexOf("iphone") > -1 || (agent.indexOf("mac os") > -1 && Utils.isTouchDevice())){
+    else if(agent.indexOf("whaletv") > -1 || agent.indexOf("philips") > -1 || agent.indexOf("nettv") > -1){
+        Storage.set('platform', 'philips')
+    }
+    else if(agent.indexOf("ipad") > -1 && window.innerWidth == 1920 && window.innerHeight == 1080){
+        Storage.set('platform', 'apple_tv')
+    }
+    else if(agent.indexOf("iphone") > -1 || (agent.indexOf("mac os") > -1 && Utils.isTouchDevice()) || (agent.indexOf("macintosh") > -1 && Utils.isTouchDevice())){
         Storage.set('platform', 'apple')
     }
     else if(typeof nw !== 'undefined') {
@@ -40,11 +53,12 @@ function init(){
     else if(agent.indexOf("version/5.1.7 safari/534.57.2") > -1){
         Storage.set('platform', 'orsay')
     }
-    else if(agent.indexOf("windows nt") > -1) {
+    else if(agent.indexOf("windows nt") > -1 || (agent.indexOf("macintosh") > -1 && !Utils.isTouchDevice())) {
         Storage.set('platform', 'browser')
     }
     else if(agent.indexOf("maple") > -1) {
         Storage.set('platform', 'orsay')
+        Orsay.init()
     }
     else{
         Storage.set('platform','')
@@ -75,7 +89,7 @@ function is(need){
  * @returns Boolean
  */
 function any(){
-    return is('tizen') || is('webos') || is('android') || is('netcast') || is('orsay') || is('apple') || desktop() ? true : false
+    return is('tizen') || is('webos') || is('android') || is('netcast') || is('orsay') || is('apple') || is('apple_tv') || desktop() ? true : false
 }
 
 /**
@@ -83,7 +97,7 @@ function any(){
  * @returns Boolean
  */
 function tv(){
-    return is('tizen') || is('webos') || is('orsay') || is('netcast') ? true : false
+    return is('tizen') || is('webos') || is('orsay') || is('netcast') || is('apple_tv') ? true : false
 }
 
 /**
@@ -110,30 +124,66 @@ function screen(need){
     if(need == 'light'){
         return Storage.field('light_version') && screen('tv')
     }
-    
-    if(need == 'tv'){
-        if(Boolean(navigator.userAgent.toLowerCase().match(/iphone|ipad/i))) return false
-        else if(tv()) return true
+
+    let is_tv = true
+
+    if(!tv()){
+        if(Storage.get('is_true_mobile', 'false')) is_tv = false
+        else if(Boolean(Storage.get('platform', '') == 'apple')) is_tv = false
+        else if(Boolean(navigator.userAgent.toLowerCase().match(/iphone|ipad/i))) is_tv = false
         else if(Utils.isTouchDevice()){
-            if(Boolean(navigator.userAgent.toLowerCase().match(/(large screen)|googletv|mibox|mitv|smarttv|google tv/i))) return true
-            else{
+            if(!Boolean(navigator.userAgent.toLowerCase().match(/(large screen)|googletv|mibox|mitv|smarttv|google tv/i))){
                 let ratio  = window.devicePixelRatio || 1
                 let width  = window.innerWidth * ratio
                 let height = window.innerHeight * ratio
 
-                if(width > height && width >= 1280){
-                    return Storage.get('is_true_mobile','false') ? false : true
-                }
+
+                is_tv = width > height && width >= 1280
             }
         }
-        else return true
     }
-
-    if(need == 'mobile'){
-        return (Utils.isTouchDevice() && window.innerHeight > window.innerWidth) || Storage.get('is_true_mobile','false') || Boolean(Storage.get('platform', '') == 'apple')
-    }
+    
+    if(need == 'tv') return is_tv
+    if(need == 'mobile') return !is_tv
 
     return false
+}
+
+function install(what){
+    let about = Template.get('about')
+
+    if($('.modal').length) Modal.close()
+
+    if(what == 'apk'){
+        $('> div:eq(0)',about).html(Lang.translate('install_app_apk_text'))
+        $('.about__contacts',about).empty()
+        $('.about__rules',about).remove()
+
+        $('.about__contacts',about).append(`
+            <div>
+                <small>Telegram</small><br>
+                @lampa_android
+            </div>
+        `)
+
+        $('.about__contacts',about).append(`
+            <div>
+                <small>${Lang.translate('settings_parser_jackett_link')}</small><br>
+                <a href="https://${Manifest.cub_domain}/lampa" target="_blank" style="color: inherit; text-decoration: none;">https://${Manifest.cub_domain}/lampa</a>
+            </div>
+        `)
+
+        Modal.open({
+            title: '',
+            html: about,
+            size: 'medium',
+            onBack: ()=>{
+                Modal.close()
+
+                Controller.toggle('content')
+            }
+        })
+    }
 }
 
 export default {
@@ -144,5 +194,6 @@ export default {
     tv,
     desktop,
     version,
-    screen
+    screen,
+    install
 }

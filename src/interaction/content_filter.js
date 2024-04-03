@@ -523,14 +523,14 @@ function queryForTMDB(){
 
     data.year.items.forEach(a=>{
         if(a.selected && !a.any){
-            let need = type == 'movie' ? 'release_date' : 'air_date'
+            let need = type == 'movie' ? 'primary_release_date' : 'first_air_date'
 
             if(a.title.indexOf('-') >= 0){
-                query.push(need+'.lte='+a.title.split('-')[0]+'-01-01')
+                query.push(need+'.lte='+a.title.split('-')[0]+'-12-31')
                 query.push(need+'.gte='+a.title.split('-')[1]+'-01-01')
             }
             else{
-                query.push(need+'.gte='+a.title+'-01-01')
+                query.push((type == 'movie' ? 'primary_release_year' : 'first_air_date_year') + '=' + a.title)
             }
         }
     })
@@ -645,7 +645,7 @@ function search(){
 
     let object = Activity.active()
 
-    if(object.component == 'category_full' && (object.url.indexOf('discover') == 0 || object.url.indexOf('?cat=') == 0)) Activity.replace(activity)
+    if(object.component == 'category_full' && (object.url.indexOf('discover') == 0 || object.url.indexOf('?cat=') == 0)) Activity.replace(activity, true)
     else Activity.push(activity)
 }
 

@@ -6,6 +6,9 @@ import EPG from '../utils/epg'
 import Utils from '../utils/utils'
 import Url from '../utils/url'
 import Favorites from '../utils/favorites'
+import HUD from '../hud/hud'
+import Locked from '../utils/locked'
+import Pilot from '../utils/pilot'
 
 class Channels{
     constructor(listener){
@@ -29,16 +32,9 @@ class Channels{
             this.listener.send('playlist-main')
         })
 
-        this.inner_listener.follow('play',this.play.bind(this))
+        this.inner_listener.follow('play',this.playChannel.bind(this))
 
-        this.inner_listener.follow('play-archive',(data)=>{
-            this.archive = data
-
-            this.play({
-                position: this.icons.icons.indexOf(data.channel),
-                total: this.icons.icons.length
-            })
-        })
+        this.inner_listener.follow('play-archive',this.playArchive.bind(this))
 
         this.active = this.menu
 
@@ -55,31 +51,68 @@ class Channels{
         this.listener.send('display',this)
     }
 
-    play(data){
+    addToHistory(channel){
+        let board = Lampa.Storage.cache('iptv_play_history_main_board',20,[])
+        let find  = board.find(a=>a.url == channel.url)
+
+        if(find) Lampa.Arrays.remove(board, find)
+
+        board.push(channel)
+
+        Lampa.Storage.set('iptv_play_history_main_board',board)
+    }
+
+    playArchive(data){
+        let convert = (p)=>{
+            let item = {
+                title: Lampa.Utils.parseTime(p.start).time + ' - ' + Lampa.Utils.capitalizeFirstLetter(p.title),
+            }
+
+            item.url = Url.catchupUrl(data.channel.url, data.channel.catchup.type, data.channel.catchup.source)
+            item.url = Url.prepareUrl(item.url, p)
+
+            item.need_check_live_stream = true
+
+            return item
+        }
+
+        Lampa.Player.runas(Lampa.Storage.field('player_iptv'))
+
+        Lampa.Player.play(convert(data.program))
+        Lampa.Player.playlist(data.playlist.map(convert))
+    }
+
+    playChannel(data){
         let cache = {}
             cache.none = []
 
         let time
         let update
 
-        let start_channel = Lampa.Arrays.clone(this.icons.icons[data.position])
-            start_channel.original = this.icons.icons[data.position]
+        let start_channel = Lampa.Arrays.clone(this.icons.icons_clone[data.position])
+            start_channel.original = this.icons.icons_clone[data.position]
 
         data.url = Url.prepareUrl(start_channel.url)
 
         if(this.archive && this.archive.channel == start_channel.original){
             data.url = Url.catchupUrl(this.archive.channel.url, this.archive.channel.catchup.type, this.archive.channel.catchup.source)
-            data.url = Url.prepareUrl(this.archive.channel.url, this.archive.program)
+            data.url = Url.prepareUrl(data.url, this.archive.program)
+        }
+        else{
+            this.addToHistory(Lampa.Arrays.clone(start_channel))
         }
 
+        data.locked = Boolean(Locked.find(Locked.format('channel', start_channel.original)))
+
         data.onGetChannel = (position)=>{
-            let original  = this.icons.icons[position]
+            let original  = this.icons.icons_clone[position]
             let channel   = Lampa.Arrays.clone(original)
             let timeshift = this.archive && this.archive.channel == original ? this.archive.timeshift : 0
 
             channel.name  = Utils.clearChannelName(channel.name)
             channel.group = Utils.clearMenuName(channel.group)
             channel.url   = Url.prepareUrl(channel.url)
+            channel.icons = []
 
             channel.original = original
             
@@ -90,6 +123,17 @@ class Channels{
                 channel.url = Url.prepareUrl(channel.url, this.archive.program)
             }
 
+            if(Locked.find(Locked.format('channel', original))){
+                channel.locked = true
+            }
+
+            if(Boolean(Favorites.find(channel))){
+                channel.icons.push(Lampa.Template.get('cub_iptv_icon_fav',{},true))
+            }
+            if(Boolean(Locked.find(Locked.format('channel', channel)))){
+                channel.icons.push(Lampa.Template.get('cub_iptv_icon_lock',{},true))
+            }
+
             update = false
 
             if(channel.id){
@@ -97,7 +141,9 @@ class Channels{
                     cache[channel.id] = []
 
                     Api.program({
+                        name: channel.name,
                         channel_id: channel.id,
+                        tvg: channel.tvg,
                         time: EPG.time(channel,timeshift)
                     }).then(program=>{
                         cache[channel.id] = program
@@ -128,7 +174,104 @@ class Channels{
             return channel
         }
 
+        data.onMenu = (channel)=>{
+            this.hud = new HUD(channel)
+
+            this.hud.listener.follow('close',()=>{
+                this.hud = this.hud.destroy()
+
+                Lampa.Controller.toggle('player_tv')
+            })
+
+            this.hud.listener.follow('get_program_endless',()=>{
+                let program = cache[channel.id || 'none']
+
+                let endless = this.details.playlist(channel, program, {
+                    onPlay: (param)=>{
+                        Lampa.Player.close()
+    
+                        this.playArchive(param)
+                    }
+                })
+
+                this.hud.listener.send('set_program_endless',{endless})
+            })
+
+            this.hud.listener.follow('action-favorite',(orig)=>{
+                Lampa.PlayerIPTV.redrawChannel()
+
+                this.inner_listener.send('update-favorites')
+
+                this.inner_listener.send('update-channel-icon', orig)
+            })
+
+            this.hud.listener.follow('action-locked',(orig)=>{
+                Lampa.PlayerIPTV.redrawChannel()
+
+                this.inner_listener.send('update-channel-icon', orig)
+            })
+
+            this.hud.create()
+        }
+
+        //устарело, потом удалить
+        data.onPlaylistProgram = (channel)=>{
+            let program = cache[channel.id || 'none']
+
+            if(!program.length) return
+
+            let html = document.createElement('div')
+
+            html.style.lineHeight = '1.4'
+
+            Lampa.Modal.open({
+                title: '',
+                size: 'medium',
+                html: $(html)
+            })
+
+            let endless = this.details.playlist(channel, program, {
+                onPlay: (param)=>{
+                    Lampa.Modal.close()
+                    Lampa.Player.close()
+
+                    this.playArchive(param)
+                }
+            })
+
+            html.append(endless.render())
+
+            Lampa.Controller.add('modal',{
+                invisible: true,
+                toggle: ()=>{
+                    Lampa.Controller.collectionSet(html)
+                    Lampa.Controller.collectionFocus(false,html)
+                },
+                up: ()=>{
+                    endless.move(-1)
+
+                    Lampa.Controller.collectionSet(html)
+                    Lampa.Controller.collectionFocus(false,html)
+                },
+                down: ()=>{
+                    endless.move(1)
+
+                    Lampa.Controller.collectionSet(html)
+                    Lampa.Controller.collectionFocus(false,html)
+                },
+                back: ()=>{
+                    Lampa.Modal.close()
+
+                    Lampa.Controller.toggle('player_tv')
+                }
+            })
+            
+            Lampa.Controller.toggle('modal')
+        }
+
         data.onPlay = (channel)=>{
+            Pilot.notebook('channel', this.icons.icons_clone.indexOf(channel.original))
+
             if(channel.original.added){
                 channel.original.view++
 
@@ -214,6 +357,10 @@ class Channels{
             update = null
 
             this.archive = false
+
+            if(this.hud) this.hud = this.hud.destroy()
+
+            Pilot.notebook('channel', -1)
 
             clearInterval(time)
         }

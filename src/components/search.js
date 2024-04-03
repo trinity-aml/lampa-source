@@ -9,6 +9,7 @@ import Scroll from '../interaction/scroll'
 import Arrays from '../utils/arrays'
 import Layer from '../utils/layer'
 import HeadBackward from '../interaction/head_backward'
+import Subscribe from '../utils/subscribe'
 
 let html = $('<div class="main-search"></div>'),
     search,
@@ -18,7 +19,8 @@ let html = $('<div class="main-search"></div>'),
     scroll,
     input = '',
     params = {},
-    additional = []
+    additional = [],
+    listener = Subscribe()
 
 function open(use_params = {}){
     params = use_params
@@ -32,6 +34,8 @@ function open(use_params = {}){
     toggle()
 
     Layer.update(html[0])
+
+    listener.send('open')
 }
 
 function toggle(){
@@ -83,6 +87,9 @@ function create(){
 
 function createSources(){
     sources = new Sources({sources: params.sources, additional})
+
+    listener.send('sources',{sources})
+
     sources.create()
 
     sources.listener.follow('back',destroy)
@@ -184,15 +191,17 @@ function destroy(){
 
     html.empty()
 
-    if(params.onBack) params.onBack()
-    else Controller.toggle('content')
-
     $('body').toggleClass('ambience--enable',false)
     $('body').toggleClass('search--open',false)
+
+    if(params.onBack) params.onBack()
+    else Controller.toggle('content')
 
     params = {}
 
     input = ''
+
+    listener.send('close')
 }
 
 function close(){
@@ -200,6 +209,7 @@ function close(){
 }
 
 export default {
+    listener,
     open,
     render,
     addSource,

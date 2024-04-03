@@ -4,7 +4,12 @@ let list_opened   = false
 let logs          = true
 
 function reguest(params, callback){
-    if(connect_type == 'http'){
+    if(params.ffprobe){
+        setTimeout(()=>{
+            callback({streams: params.ffprobe})
+        },200)
+    }
+    else if(connect_type == 'http'){
         let net = new Lampa.Reguest()
 
         net.timeout(1000*15)
@@ -322,40 +327,62 @@ function parseMetainfo(data){
             let codec_subs  = result.streams.filter(a=>a.codec_type == 'subtitle')
 
             codec_video.slice(0,1).forEach(v=>{
-                let line = []
+                let line = {}
 
-                if(v.width && v.height) line.push(v.width + 'х' + v.height)
-                if(v.codec_name) line.push(v.codec_name.toUpperCase())
-                if(Boolean(v.is_avc)) line.push('AVC')
-
-                if(line.length) video.push(line.join(' / '))
+                if(v.width && v.height) line.video = v.width + 'х' + v.height
+		if(v.duration){
+			line.duration = new Date(v.duration * 1000)
+			.toISOString()
+			.slice(11, 19);			
+			} 
+		else if(v.tags){
+				if(v.tags.DURATION){
+					line.duration = v.tags.DURATION ? v.tags.DURATION.split(".") : ''
+					line.duration.pop()
+					} 
+				else if(v.tags["DURATION-eng"]){
+					line.duration = v.tags["DURATION-eng"] ? v.tags["DURATION-eng"].split(".") : ''
+					line.duration.pop()
+					}
+			}        
+                if(v.codec_name)        line.codec = v.codec_name.toUpperCase()
+                if(Boolean(v.is_avc))   line.avc = 'AVC'
+                let bit = v.bit_rate ? v.bit_rate : v.tags && (v.tags.BPS || v.tags["BPS-eng"]) ? v.tags.BPS || v.tags["BPS-eng"] : '--'
+                line.rate = bit == '--' ? bit : Math.round(bit/1000000) + ' ' + Lampa.Lang.translate('speed_mb')
+                
+                if(Lampa.Arrays.getKeys(line).length) video.push(line)
             })
 
             codec_audio.forEach((a,i)=>{
-                let line = [i+1]
+                let line = {num: i+1}
 
                 if(a.tags){
-                    line.push(a.tags.language)
-
-                    if(a.tags.title || a.tags.handler_name) line.push(a.tags.title || a.tags.handler_name)
+                    line.lang = (a.tags.language || '').toUpperCase()
                 }
 
-                if(a.codec_name) line.push(a.codec_name.toUpperCase())
-                if(a.channels) line.push(a.channels + ' ch.' + (a.channel_layout ? ' ' + a.channel_layout : ''))
+                line.name = a.tags ? (a.tags.title || a.tags.handler_name) : ''
 
-                if(line.length) audio.push(line.join(' / '))
+                if(a.codec_name) line.codec = a.codec_name.toUpperCase()
+                if(a.channel_layout) line.channels = a.channel_layout.replace('(side)','').replace('stereo','2.0').replace('8 channels (FL+FR+FC+LFE+SL+SR+TFL+TFR)','7.1')
+
+                let bit = a.bit_rate ? a.bit_rate : a.tags && (a.tags.BPS || a.tags["BPS-eng"]) ? a.tags.BPS || a.tags["BPS-eng"] : '--'
+
+                line.rate = bit == '--' ? bit : Math.round(bit/1000) + ' ' + Lampa.Lang.translate('speed_kb')
+
+                if(Lampa.Arrays.getKeys(line).length) audio.push(line)
             })
 
             codec_subs.forEach((a,i)=>{
-                let line = [i+1]
+                let line = {num: i+1}
 
                 if(a.tags){
-                    line.push(a.tags.language)
-
-                    if(a.tags.title || a.tags.handler_name) line.push(a.tags.title || a.tags.handler_name)
+                    line.lang = (a.tags.language || '').toUpperCase()
                 }
 
-                if(line.length) subs.push(line.join(' / '))
+                line.name = a.tags ? (a.tags.title || a.tags.handler_name) : ''
+		if(a.codec_name) line.codec = a.codec_name.toUpperCase().replace('SUBRIP', 'SRT').replace('HDMV_PGS_SUBTITLE', 'HDMV PGS').replace('MOV_TEXT', 'MOV TEXT')
+
+                if(Lampa.Arrays.getKeys(line).length) subs.push(line)
             })
 
 
@@ -363,16 +390,30 @@ function parseMetainfo(data){
 
             function append(name, fields){
                 if(fields.length){
-                    let where = html.find('.tracks-metainfo__item-'+name + ' .tracks-metainfo__info')
+                    let block = Lampa.Template.get('tracks_metainfo_block',{})
 
-                    fields.slice(0,4).forEach(i=>{
-                        where.append('<div>'+i+'</div>')
+                    block.find('.tracks-metainfo__label').text(Lampa.Lang.translate(name == 'video' ? 'extensions_hpu_video' : name == 'audio' ? 'player_tracks' : 'player_' + name))
+
+                    fields.forEach(data=>{
+                        let item = $('<div class="tracks-metainfo__item tracks-metainfo__item--'+name+' selector"></div>')
+
+                        item.on('hover:focus',(e)=>{
+                            Lampa.Modal.scroll().update(item)
+                        })
+
+                        for(let i in data){
+                            let div = $('<div class="tracks-metainfo__column--'+i+'"></div>')
+
+                            div.text(data[i])
+
+                            item.append(div)
+                        }
+
+
+                        block.find('.tracks-metainfo__info').append(item)
                     })
 
-                    if(fields.length > 4) where.append('<div>'+Lampa.Lang.translate('more')+' +' +(fields.length - 4)+'</div>')
-                }
-                else{
-                    html.find('.tracks-metainfo__item-'+name).remove()
+                    html.append(block)
                 }
             }
 
@@ -385,6 +426,8 @@ function parseMetainfo(data){
             if(video.length || audio.length || subs.length){
                 data.item.after(html)
             }
+
+            if(Lampa.Controller.enabled().name == 'modal') Lampa.Controller.toggle('modal')
         }
     })
 }
@@ -409,25 +452,17 @@ Lampa.Template.add('tracks_loading', `
 `)
 
 Lampa.Template.add('tracks_metainfo', `
-    <div class="tracks-metainfo">
-        <div class="tracks-metainfo__half">
-            <div class="tracks-metainfo__item-video">
-                <div class="tracks-metainfo__label">#{extensions_hpu_video}</div>
-                <div class="tracks-metainfo__info"></div>
-            </div>
-            <div class="tracks-metainfo__item-audio">
-                <div class="tracks-metainfo__label">#{player_tracks}</div>
-                <div class="tracks-metainfo__info"></div>
-            </div>
-        </div>
-        <div class="tracks-metainfo__half">
-            <div class="tracks-metainfo__item-subs">
-                <div class="tracks-metainfo__label">#{player_subs}</div>
-                <div class="tracks-metainfo__info"></div>
-            </div>
-        </div>
+    <div class="tracks-metainfo"></div>
+`)
+
+Lampa.Template.add('tracks_metainfo_block', `
+    <div class="tracks-metainfo__line">
+        <div class="tracks-metainfo__label"></div>
+        <div class="tracks-metainfo__info"></div>
     </div>
 `)
+
+
 
 Lampa.Template.add('tracks_css', `
     <style>

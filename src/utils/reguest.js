@@ -259,6 +259,9 @@ function create(){
 
         if (jqXHR.status === 0 && exception !== 'timeout') {
             msg = Lang.translate('network_noconnect')
+        }
+        else if(jqXHR.responseJSON && jqXHR.responseJSON.code){
+            msg = Lang.translate('network_500').replace('500',jqXHR.responseJSON.code) + (jqXHR.responseJSON.text ? ' [' + jqXHR.responseJSON.text + ']' : '')
         } else if (jqXHR.status == 404) {
             msg = Lang.translate('network_404')
         } else if (jqXHR.status == 401) {
@@ -341,7 +344,7 @@ function create(){
                 let use = Storage.field('torrserver_auth')
 				let srv = Storage.get(Storage.field('torrserver_use_link') == 'two' ? 'torrserver_url_two' : 'torrserver_url')
 
-				if(use && params.url.indexOf(srv) >= 0){
+				if(use && srv && params.url.indexOf(srv) >= 0){
                     let authorization = "Basic " + Base64.encode(Storage.get('torrserver_login')+':'+Storage.get('torrserver_password'))
 
                     console.log('Request','authorization:',authorization)

@@ -8,6 +8,7 @@ import Lang from '../utils/lang'
 import Layer from '../utils/layer'
 import DeviceInput from '../utils/device_input'
 import Screensaver from './screensaver'
+import Utils from '../utils/math'
 
 let listener  = Subscribe()
 let activites = []
@@ -193,6 +194,23 @@ function Activity(component, object){
     this.append()
 }
 
+function parseStartCard(){
+    let id = Utils.gup('card')
+
+    if(id && !window.start_deep_link){
+        window.start_deep_link = {
+            id: id,
+            component: "full",
+            method: Utils.gup('media') || 'movie',
+            source: Utils.gup('source') || 'cub',
+            card: {
+                id: id,
+                source: Utils.gup('source') || 'cub'
+            }
+        }
+    }
+}
+
 /**
  * Запуск
  */
@@ -200,6 +218,8 @@ function init(){
     content   = Template.js('activitys')
     slides    = content.querySelector('.activitys__slides')
     maxsave   = Storage.get('pages_save_total',5)
+
+    parseStartCard()
 
     empty()
 
@@ -452,8 +472,8 @@ function last(){
         if(action == 'favorite') {
             push({
                 url: '',
-                title: type == 'book' ? Lang.translate('title_book') : type == 'like' ? Lang.translate('title_like') : type == 'history' ? Lang.translate('title_history') : Lang.translate('title_wath'),
-                component: 'favorite',
+                title: Lang.translate(type == 'bookmarks' ? 'settings_input_links' : 'title_history'),
+                component: type == 'bookmarks' ? 'bookmarks' : 'favorite',
                 type: type,
                 page: 1
             })
@@ -517,7 +537,7 @@ function out(){
  * Заменить активную активность
  * @param {object} replace 
  */
-function replace(replace = {}){
+function replace(replace = {}, clear){
     let object = extractObject(active())
 
     for(var i in replace){
@@ -528,7 +548,7 @@ function replace(replace = {}){
 
     activites.pop()
 
-    push(object)
+    push(clear ? replace : object)
 }
 
 export default {

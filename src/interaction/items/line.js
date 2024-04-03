@@ -37,7 +37,7 @@ function create(data, params = {}){
                 page: 1,
                 genres: params.genres,
                 filter: data.filter,
-                source: params.object.source
+                source: data.source || params.object.source
             })
         }
     }
@@ -60,7 +60,7 @@ function create(data, params = {}){
 
         scroll.body(true).classList.add('items-cards')
 
-        content.querySelector('.items-line__title').innerText = data.title
+        content.querySelector('.items-line__title').innerHTML = data.title
 
         content.classList.add('items-line--type-' + (params.type || 'none'))
 

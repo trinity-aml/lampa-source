@@ -7,7 +7,6 @@ import Search from '../../components/search'
 import Activity from '../../interaction/activity'
 import Torrent from '../../interaction/torrent'
 import Modal from '../../interaction/modal'
-import Platform from '../platform'
 
 let url
 let network = new Reguest()
@@ -19,23 +18,17 @@ function init(){
             get({
                 search: decodeURIComponent(params.query),
                 other: true,
-                from_search: true,
-                movie: {
-                    genres: [],
-                    title: decodeURIComponent(params.query),
-                    original_title: decodeURIComponent(params.query),
-                    number_of_seasons: 0
-                }
+                from_search: true
             },(json)=>{
                 json.title   = Lang.translate('title_parser')
                 json.results = json.Results.slice(0,20)
                 json.Results = null
-    
+
                 json.results.forEach((element)=>{
                     element.Title = Utils.shortText(element.Title,110)
                 })
-    
-                oncomplite([json])
+
+                oncomplite(json.results.length ? [json] : [])
             },()=>{
                 oncomplite([])
             })
@@ -58,6 +51,7 @@ function init(){
                 title: Lang.translate('title_torrents'),
                 component: 'torrents',
                 search: params.query,
+                from_search: true,
                 noinfo: true,
                 movie: {
                     title: params.query,
@@ -87,7 +81,7 @@ function init(){
                     html: Template.get('modal_pending',{text: Lang.translate('torrent_get_magnet')}),
                     onBack: ()=>{
                         Modal.close()
-        
+
                         params.line.toggle()
                     }
                 })
@@ -131,7 +125,7 @@ function get(params = {}, oncomplite, onerror){
 
     if(Storage.field('parser_torrent_type') == 'jackett'){
         if(Storage.field('jackett_url')){
-            url = Utils.checkHttp(Storage.field('jackett_url'))
+            url = Utils.checkEmptyUrl(Storage.field('jackett_url'))
 
             let ignore = false//params.from_search && !url.match(/\d+\.\d+\.\d+/g)
 
@@ -143,13 +137,19 @@ function get(params = {}, oncomplite, onerror){
         else{
             error(Lang.translate('torrent_parser_set_link') + ': Jackett')
         }
-    }
-    else{
+    } else if(Storage.field('parser_torrent_type') == 'prowlarr'){
+        if(Storage.field('prowlarr_url')){
+            url = Utils.checkEmptyUrl(Storage.field('prowlarr_url'))
+            prowlarr(params, complite, error)
+        } else {
+            error(Lang.translate('torrent_parser_set_link') + ': Prowlarr')
+        }
+    } else {
         if(Storage.get('native')){
             torlook(params, complite, error)
         }
         else if(Storage.field('torlook_parse_type') == 'site' && Storage.field('parser_website_url')){
-            url = Utils.checkHttp(Storage.field('parser_website_url'))
+            url = Utils.checkEmptyUrl(Storage.field('parser_website_url'))
 
             torlook(params, complite, error)
         }
@@ -232,20 +232,23 @@ function torlookApi(params = {}, oncomplite, onerror){
 function jackett(params = {}, oncomplite, onerror){
     network.timeout(1000 * Storage.field('parse_timeout'))
 
-    let u      = url + '/api/v2.0/indexers/'+(Storage.field('jackett_interview') == 'healthy' ? 'status:healthy' : 'all')+'/results?apikey='+Storage.field('jackett_key')+'&Query='+encodeURIComponent(params.search)
-    let genres = params.movie.genres.map((a)=>{
-        return a.name
-    })
-    
-    if(!params.clarification){
-        u = Utils.addUrlComponent(u,'title='+encodeURIComponent(params.movie.title))
-        u = Utils.addUrlComponent(u,'title_original='+encodeURIComponent(params.movie.original_title))
-    }
+    let u = url + '/api/v2.0/indexers/'+(Storage.field('jackett_interview') == 'healthy' ? 'status:healthy' : 'all')+'/results?apikey='+Storage.field('jackett_key')+'&Query='+encodeURIComponent(params.search)
 
-    u = Utils.addUrlComponent(u,'year='+encodeURIComponent(((params.movie.release_date || params.movie.first_air_date || '0000') + '').slice(0,4)))
-    u = Utils.addUrlComponent(u,'is_serial='+(params.movie.first_air_date || params.movie.last_air_date ? '2' : params.other ? '0' : '1'))
-    u = Utils.addUrlComponent(u,'genres='+encodeURIComponent(genres.join(',')))
-    u = Utils.addUrlComponent(u, 'Category[]=' + (params.movie.number_of_seasons > 0 ? 5000 : 2000) + (params.movie.original_language == 'ja' ? ',5070' : ''))
+    if(!params.from_search){
+        let genres = params.movie.genres.map((a)=>{
+            return a.name
+        })
+
+        if(!params.clarification){
+            u = Utils.addUrlComponent(u,'title='+encodeURIComponent(params.movie.title))
+            u = Utils.addUrlComponent(u,'title_original='+encodeURIComponent(params.movie.original_title))
+        }
+
+        u = Utils.addUrlComponent(u,'year='+encodeURIComponent(((params.movie.release_date || params.movie.first_air_date || '0000') + '').slice(0,4)))
+        u = Utils.addUrlComponent(u,'is_serial='+(params.movie.first_air_date || params.movie.last_air_date ? '2' : params.other ? '0' : '1'))
+        u = Utils.addUrlComponent(u,'genres='+encodeURIComponent(genres.join(',')))
+        u = Utils.addUrlComponent(u, 'Category[]=' + (params.movie.number_of_seasons > 0 ? 5000 : 2000) + (params.movie.original_language == 'ja' ? ',5070' : ''))
+    }
 
     network.native(u,(json)=>{
         if(json.Results){
@@ -258,15 +261,61 @@ function jackett(params = {}, oncomplite, onerror){
 
             oncomplite(json)
         }
-        else onerror(Lang.translate('torrent_parser_no_responce'))
+        else onerror(Lang.translate('torrent_parser_no_responce') + ' (' + url + ')')
     },(a,c)=>{
-        onerror(Lang.translate('torrent_parser_no_responce'))
+        onerror(Lang.translate('torrent_parser_no_responce') + ' (' + url + ')')
+    })
+}
+
+// доки https://wiki.servarr.com/en/prowlarr/search#search-feed
+function prowlarr(params = {}, oncomplite, onerror){
+    const u = new URL('/api/v1/search', url);
+    network.timeout(1000 * Storage.field('parse_timeout'));
+
+    u.searchParams.set('apikey', Storage.field('prowlarr_key'));
+    u.searchParams.set('query', params.search);
+
+
+    if(!params.from_search){
+        const isSerial = !!(params.movie.first_air_date || params.movie.last_air_date);
+
+        u.searchParams.set('categories', (params.movie.number_of_seasons > 0 ? 5000 : 2000) + (params.movie.original_language == 'ja' ? ',5070' : ''));
+        u.searchParams.set('type', isSerial ? 'tvsearch' : 'search')
+    }
+
+    network.native(u.href,(json)=> {
+        if(Array.isArray(json)) {
+            oncomplite({
+                Results: json
+                    .filter((e) => e.protocol === 'torrent')
+                    .map((e) => {
+                        const hash = Utils.hash(e.title);
+
+                        return {
+                            Title: e.title,
+                            Tracker: e.indexer,
+                            size: Utils.bytesToSize(e.size),
+                            PublishDate: Utils.strToTime(e.publishDate),
+                            Seeders: parseInt(e.seeders),
+                            Peers: parseInt(e.leechers),
+                            MagnetUri: e.downloadUrl,
+                            viewed: viewed(hash),
+                            hash
+                        }
+                    })
+            })
+        } else {
+            onerror(Lang.translate('torrent_parser_no_responce') + ' (' + url + ')')
+        }
+    },
+        ()=>{
+        onerror(Lang.translate('torrent_parser_no_responce') + ' (' + url + ')')
     })
 }
 
 function marnet(element, oncomplite, onerror){
     network.timeout(1000 * 15)
-    
+
     let s = Utils.checkHttp(Storage.field('torlook_site')) + '/'
     let u = Storage.get('native') || Storage.field('torlook_parse_type') == 'native' ? s + element.reguest : url.replace('{q}',encodeURIComponent(s + element.reguest))
 

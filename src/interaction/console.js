@@ -232,7 +232,12 @@ function follow(){
 
         let name = msgs[0]
 
-        msgs[0] = '<span style="color: '+Utils.stringToHslColor(msgs[0], 50, 65)+'">' + msgs[0] + '</span>'
+        if(msgs.length < 2){
+            name = 'Other'
+        }
+        else{
+            msgs[0] = '<span style="color: '+Utils.stringToHslColor(msgs[0], 50, 65)+'">' + msgs[0] + '</span>'
+        }
 
         add(name,msgs.join(' '))
 
@@ -240,11 +245,20 @@ function follow(){
     }
     
     window.addEventListener("error", function (e) {
-        let stack = (e.error && e.error.stack ? e.error.stack : e.stack || '').split("\n").join('<br>')
+        let welcome = $('.welcome')
 
-		add('Script',(e.error || e).message + '<br><br>' + stack)
+        if(welcome.length){
+            welcome.fadeOut(500,()=>{
+                Noty.show('Error: ' + (e.error || e).message + '<br><br>' + stack, {time: 8000})
+            })
+        }
 
-        if(stack.indexOf('resetTopStyle') == -1) Noty.show('Error: ' + (e.error || e).message + '<br><br>' + stack)
+        let stack   = (e.error && e.error.stack ? e.error.stack : e.stack || '').split("\n").join('<br>')
+        let message = typeof e.error == 'string' ? e.error : (e.error || e).message
+
+		add('Script',message + '<br><br>' + stack)
+
+        if(!(stack.indexOf('resetTopStyle') >= 0 || stack.indexOf('Blocked a frame') >= 0)) Noty.show('Error: ' + message + '<br><br>' + stack, {time: 8000})
 	})
 }
 

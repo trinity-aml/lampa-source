@@ -29,7 +29,7 @@ function init(){
     if(!window.lampa_settings.torrents_use) html.find('[data-action="mytorrents"]').remove()
 
     if(!Lang.selected(['ru','uk','be'])){
-        html.find('[data-action="relise"],[data-action="anime"]').remove()
+        html.find('[data-action="relise"],[data-action="anime"],[data-action="feed"]').remove()
     }
 
     Lampa.Listener.send('menu',{type:'start',body: html})
@@ -95,7 +95,7 @@ function controller(){
     Controller.add('menu',{
         toggle: ()=>{
             Controller.collectionSet(html)
-            Controller.collectionFocus(last,html)
+            Controller.collectionFocus(last,html,true)
 
             clearTimeout(visible_timer)
 
@@ -327,13 +327,20 @@ function ready(){
             })
         }
 
+        if(prepared(action,['myperson'])){
+            Activity.push({
+                title: Lang.translate('title_actors'),
+                component: 'myperson'
+            })
+        }
+
         if(action == 'search')   Controller.toggle('search')
         if(action == 'settings') Controller.toggle('settings')
         if(action == 'about'){
             let about = Template.get('about')
 
             if(window.lampa_settings.white_use){
-                about.find('.about__contacts').remove()
+                about.find('.about__contacts > div:eq(1)').remove()
             }
 
             if(Platform.is('android')){
@@ -358,8 +365,8 @@ function ready(){
         if(action == 'favorite'){
             Activity.push({
                 url: '',
-                title: type == 'book' ? Lang.translate('title_book') : type == 'like' ? Lang.translate('title_like') : type == 'history' ? Lang.translate('title_history') : Lang.translate('title_wath'),
-                component: 'favorite',
+                title: Lang.translate(type == 'book' ? 'settings_input_links' : 'title_history'),
+                component: type == 'history' ? 'favorite' : 'bookmarks',
                 type: type,
                 page: 1
             })
@@ -379,6 +386,15 @@ function ready(){
                 url: '',
                 title: Lang.translate('title_timetable'),
                 component: 'timetable',
+                page: 1
+            })
+        }
+
+        if(prepared(action,['feed'])){
+            Activity.push({
+                url: '',
+                title: Lang.translate('menu_feed'),
+                component: 'feed',
                 page: 1
             })
         }
@@ -427,7 +443,7 @@ function catalog(){
                 let tmdb = (Storage.field('source') == 'tmdb' || Storage.field('source') == 'cub')
                 
                 Activity.push({
-                    url: Storage.field('source') == 'tmdb' ? 'movie' : '',
+                    url: Storage.field('source') == 'tmdb' ? 'movie' : 'movie',
                     title: (a.title || Lang.translate('title_catalog')) + ' - ' + Storage.field('source').toUpperCase(),
                     component: tmdb ? 'category' : 'category_full',
                     genres: a.id,

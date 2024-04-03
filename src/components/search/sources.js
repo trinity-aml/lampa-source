@@ -3,17 +3,22 @@ import Scroll from '../../interaction/scroll'
 import Controller from '../../interaction/controller'
 import Api from '../../interaction/api'
 import Result from './results'
-import Storage from '../../utils/storage'
 import Layer from '../../utils/layer'
 
-function sortByActive(sources){
-    let active = Storage.get('source','tmdb')
+let stop_keys = [
+    'пор',
+    'порн',
+    'порно',
+    'секс',
+    'член',
 
-    sources.sort((a,b)=>{
-        if(a.title.toLowerCase() == active) return -1
-        return 0
-    })
-}
+    'por',
+    'porn',
+    'porno',
+    'sex',
+    'hot',
+    'xxx'
+]
 
 function create(params = {}){
     let scroll,
@@ -33,8 +38,6 @@ function create(params = {}){
         })
 
         let sources = params.sources || Api.availableDiscovery()
-
-        sortByActive(sources)
 
         sources.forEach(this.build.bind(this))
 
@@ -80,6 +83,8 @@ function create(params = {}){
             tab.find('.search-source__count').text(e.count)
 
             if(active == result) Layer.visible(result.render())
+
+            this.listener.send('finded',{source, result, count: e.count, data: e.data})
         })
 
         result.listener.follow('up',(e)=>{
@@ -91,7 +96,7 @@ function create(params = {}){
         result.listener.follow('back',this.listener.send.bind(this.listener,'back'))
 
         result.listener.follow('toggle',(e)=>{
-            this.listener.send('toggle',{source: source, result: e.result, element: e.element})
+            this.listener.send('toggle',{source, result: e.result, element: e.element})
         })
 
         tab.on('hover:enter',()=>{
@@ -105,6 +110,8 @@ function create(params = {}){
         scroll.append(tab)
 
         results.push(result)
+
+        this.listener.send('create',{source, result})
     }
 
 
@@ -140,9 +147,13 @@ function create(params = {}){
     this.search = function(query, immediately){
         results.forEach(result => result.cancel())
 
-        results.forEach(result => {
-            result.search(query, immediately)
-        })
+        if(!stop_keys.find(k=>k == query.toLowerCase())){
+            this.listener.send('search',{query, immediately})
+
+            results.forEach(result => {
+                result.search(query, immediately)
+            })
+        }
     }
 
     this.tabs = function(){

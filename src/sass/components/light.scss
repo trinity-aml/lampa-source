@@ -58,7 +58,13 @@ body.light--version{
     .full-start-new__poster.loaded img,
     .full-episode__img img,
     .full-episode__body,
-    .full-episode--next .full-episode__img:after{
+    .register,
+    .full-episode--next .full-episode__img:after,
+    .season-episode,
+    .season-episode__img > img,
+    .card__textbox,
+    .ad-bot__content,
+    .ad-bot__marker{
         border-radius: 0;
     }
 
@@ -67,7 +73,14 @@ body.light--version{
     .explorer-card__head-img::after,
     .full-episode.focus::after,
     .card-more .card-more__box::after,
-    .card-episode.focus .full-episode::after{
+    .card-episode.focus .full-episode::after,
+    .feed-item__poster-img,
+    .feed-item__poster-box,
+    .feed-item__image-box,
+    .feed-item__image-img,
+    .register::after,
+    .season-episode::after,
+    .ad-bot.focus .ad-bot__content::after{
         border-radius: 0.4em;
     }
 
@@ -78,7 +91,8 @@ body.light--version{
     .full-descr__tag,
     .full-start .info__rate,
     .explorer__files .torrent-filter .simple-button,
-    .card-watched{
+    .card-watched,
+    .feed-item__buttons .simple-button{
         border-radius: 0.2em;
     }
 

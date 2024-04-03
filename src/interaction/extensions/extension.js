@@ -8,6 +8,7 @@ import Noty from '../noty'
 import Select from '../select'
 import Input from '../../components/settings/input'
 import Utils from './utils'
+import UtilsOther from '../../utils/math'
 
 class Extension extends Item {
     constructor(data, params){
@@ -50,7 +51,7 @@ class Extension extends Item {
             status: true
         })
 
-        if(this.params.cub){
+        if(this.params.cub || this.params.noedit){
             if(this.params.type == 'extensions'){
                 menu.push({
                     title: Lang.translate('extensions_install'),
@@ -92,11 +93,18 @@ class Extension extends Item {
                     this.data.status = this.data.status == 1 ? 0 : 1
 
                     if(this.params.cub) Account.pluginsStatus(this.data, this.data.status)
-                    else Plugins.save()
+                    else Plugins.save(this.data)
 
                     this.update()
 
-                    back()
+                    if(this.data.status == 1){
+                        back()
+
+                        Plugins.push(this.data)
+                    }
+                    else{
+                        Utils.showReload(back)
+                    }
                 }
                 else if(a.change){
                     Input.edit({
@@ -108,11 +116,15 @@ class Extension extends Item {
                         if(new_value){
                             this.data[a.change] = new_value
 
-                            Plugins.save()
+                            Plugins.save(this.data)
 
                             this.update()
 
-                            if(a.change == 'url') this.check()
+                            if(a.change == 'url'){
+                                this.check()
+
+                                Plugins.push(this.data)
+                            }
                         }
         
                         back()
@@ -132,11 +144,11 @@ class Extension extends Item {
                         back()
                     }
                     else{
+                        back()
+
                         Plugins.add({url:this.data.link, status: 1, name: this.data.name, author: this.data.author})
 
                         this.html.querySelector('.extensions__item-included').classList.remove('hide')
-
-                        Utils.showReload(back)
                     }
                 }
                 else if(a.instruction){
@@ -148,7 +160,7 @@ class Extension extends Item {
                     this.html.style.opacity = 0.5
                     this.removed = true
 
-                    back()
+                    Utils.showReload(back)
                 }
             }
         })
@@ -176,8 +188,10 @@ class Extension extends Item {
             check.classList.add('hide')
         }
 
+        let url = UtilsOther.rewriteIfHTTPS(this.data.url || this.data.link)
+
         this.network.timeout(5000)
-        this.network.native(this.data.url || this.data.link,(str)=>{
+        this.network.native(url,(str)=>{
             if(/Lampa\./.test(str)){
                 display('success',200,Lang.translate('extensions_worked'))
             }

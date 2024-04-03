@@ -39,6 +39,7 @@ import Player from './interaction/player'
 import PlayerVideo from './interaction/player/video'
 import PlayerPanel from './interaction/player/panel'
 import PlayerInfo from './interaction/player/info'
+import PlayerIPTV from './interaction/player/iptv'
 import PlayerPlaylist from './interaction/player/playlist'
 import Timeline from './interaction/timeline'
 import Settings from './components/settings'
@@ -73,7 +74,6 @@ import WebOSLauncher from './utils/webos_launcher'
 import Event from './utils/event'
 import Search from './components/search'
 import Developer from './interaction/developer'
-import Sound from './utils/sound'
 import DeviceInput from './utils/device_input'
 import AppWorker from './utils/worker'
 import Theme from './utils/theme'
@@ -82,6 +82,15 @@ import DB from './utils/db'
 import NavigationBar from './interaction/navigation_bar'
 import Endless from './interaction/endless'
 import Color from './utils/color'
+import Cache from './utils/cache'
+import Demo from './utils/demo'
+import Torrent from './interaction/torrent'
+import Torserver from './interaction/torserver'
+import Speedtest from './interaction/speedtest'
+import VPN from './utils/vpn'
+import Processing from './interaction/processing'
+import ParentalControl from './interaction/parental_control'
+import Personal from './utils/personal'
 
 /**
  * Настройки движка
@@ -90,9 +99,11 @@ if(typeof window.lampa_settings == 'undefined'){
     window.lampa_settings = {}
 }
 
+let appletv = navigator.userAgent.toLowerCase().indexOf("ipad") > -1 && window.innerWidth == 1920 && window.innerHeight == 1080
+
 Arrays.extend(window.lampa_settings,{
     socket_use: true,
-    socket_url: 'wss://cub.watch:8020',
+    socket_url: 'wss://cub.red:8010',
     socket_methods: true,
 
     account_use: true,
@@ -101,11 +112,26 @@ Arrays.extend(window.lampa_settings,{
     plugins_use: true,
     plugins_store: true,
 
-    torrents_use: true,
+    torrents_use: appletv ? false : true,
     white_use: false,
 
-    lang_use: true
+    lang_use: true,
+
+    read_only: false,
+
+    dcma: false
 })
+
+/**
+ * Для вебось маркета и других маркетов, демо режим, задрали черти.
+ */
+
+//window.lampa_settings.demo = window.lampa_settings.white_use && typeof webOS !== 'undefined' && webOS.platform.tv === true
+
+if(window.localStorage.getItem('remove_white_and_demo')){
+    window.lampa_settings.demo         = false
+    window.lampa_settings.white_use    = false
+}
 
 window.Lampa = {
     Listener: Subscribe(),
@@ -140,6 +166,7 @@ window.Lampa = {
     PlayerVideo,
     PlayerInfo,
     PlayerPanel,
+    PlayerIPTV,
     PlayerPlaylist,
     Timeline,
     Modal,
@@ -178,26 +205,65 @@ window.Lampa = {
     WebOSLauncher,
     Event,
     Search,
-    Sound,
     DeviceInput,
     Worker: AppWorker,
     DB,
     NavigationBar,
     Endless,
-    Color
+    Color,
+    Cache,
+    Torrent,
+    Torserver,
+    Speedtest,
+    Processing,
+    ParentalControl,
+    VPN
 }
 
 function closeApp(){
+    if(Platform.is('apple_tv')) window.location.assign('exit://exit');
     if(Platform.is('tizen')) tizen.application.getCurrentApplication().exit()
-    if(Platform.is('webos')) window.close()
+    if(Platform.is('webos') && typeof window.close == 'function') window.close()
     if(Platform.is('android')) Android.exit()
-    //пока не используем, нужно разобраться почему вызывается активити при загрузке главной
     if(Platform.is('orsay')) Orsay.exit()
     if(Platform.is('netcast')) window.NetCastBack()
 }
 
+function popupCloseApp(){
+    let controller = Controller.enabled().name
+
+    Modal.open({
+        title: '',
+        align: 'center',
+        zIndex: 300,
+        html: $('<div class="about">'+Lang.translate('close_app_modal')+'</div>'),
+        buttons: [
+            {
+                name: Lang.translate('settings_param_no'),
+                onSelect: ()=>{
+                    Modal.close()
+
+                    Controller.toggle(controller)
+                }
+            },
+            {
+                name: Lang.translate('settings_param_yes'),
+                onSelect: ()=>{
+                    Modal.close()
+
+                    Controller.toggle(controller)
+
+                    closeApp()
+                }
+            }
+        ]
+    })
+}
+
 function prepareApp(){
     if(window.prepared_app) return
+
+    $('body').append(Noty.render())
 
     DeviceInput.init()
 
@@ -222,12 +288,15 @@ function prepareApp(){
     })
 
     /** Выход в начальном скрине */
-    
-    Keypad.listener.follow('keydown',(e)=>{
-        if(window.appready) return
 
-        if (e.code == 8 || e.code == 27 || e.code == 461 || e.code == 10009 || e.code == 88) closeApp()
+    Keypad.listener.follow('keydown',(e)=>{
+        if(window.appready || Controller.enabled().name == 'modal') return
+
+        if (e.code == 8 || e.code == 27 || e.code == 461 || e.code == 10009 || e.code == 88) popupCloseApp()
     })
+
+    /** Отключаем правый клик */
+    if(window.innerWidth > 1280) window.addEventListener("contextmenu", e => e.preventDefault())
 
     /** Если это тач дивайс */
 
@@ -237,10 +306,24 @@ function prepareApp(){
     let old_css = $('link[href="css/app.css"]')
 
     if(Platform.is('orsay')){
-        Orsay.init()
-
+        let urlStyle = 'http://lampa.mx/css/app.css?v'
+        //Для нового типа виджета берем сохраненный адрес загрузки
+        if (Orsay.isNewWidget()) {
+            //Для фрейм загрузчика запишем полный url
+            if (location.protocol != 'file:') {
+                let newloaderUrl = location.href.replace(/[^/]*$/, '')
+                if (newloaderUrl.slice(-1) == '/') {
+                    newloaderUrl = newloaderUrl.substring(0, newloaderUrl.length - 1);
+                }
+                if (Orsay.getLoaderUrl() != newloaderUrl) {
+                    Orsay.setLoaderUrl(newloaderUrl)
+                }
+            }
+            console.log('Loader', 'start url: ', Orsay.getLoaderUrl());
+            urlStyle = Orsay.getLoaderUrl() + '/css/app.css?v'
+        }
         Utils.putStyle([
-            'http://lampa.mx/css/app.css?v' + Manifest.css_version
+            urlStyle + Manifest.css_version
         ],()=>{
             old_css.remove()
         })
@@ -315,6 +398,7 @@ function startApp(){
 
     /** Инициализируем классы */
 
+    Personal.init()
     Settings.init()
     Select.init()
     Favorite.init()
@@ -340,14 +424,19 @@ function startApp(){
     Theme.init()
     AdManager.init()
     NavigationBar.init()
+    Demo.init()
+    Speedtest.init()
+    VPN.init()
+    Processing.init()
+    ParentalControl.init()
 
     /** Надо зачиcтить, не хорошо светить пароль ;) */
 
     Storage.set('account_password','')
 
     /** Чтоб не писали по 100 раз */
-    
-    Storage.set('parser_torrent_type','jackett')
+
+    Storage.set('parser_torrent_type', Storage.get('parser_torrent_type') || 'jackett')
 
     /** Инфа */
 
@@ -362,12 +451,12 @@ function startApp(){
     console.log('App','is touch:', Utils.isTouchDevice())
     console.log('App','is PWA:', Utils.isPWA())
     console.log('App','platform:', Storage.get('platform', 'noname'))
-    
+
     /** Выход из приложения */
 
     Activity.listener.follow('backward',(event)=>{
         if(!start_time) start_time = Date.now()
-        
+
         if(event.count == 1 && Date.now() > start_time + (1000 * 2)){
             let enabled = Controller.enabled()
 
@@ -425,7 +514,9 @@ function startApp(){
 
         Screensaver.enable()
 
-        $('.welcome').fadeOut(500)
+        $('.welcome').fadeOut(500,()=>{
+            $(this).remove()
+        })
     },1000)
 
 
@@ -451,7 +542,7 @@ function startApp(){
 
     Favorite.listener.follow('add,added',(e)=>{
         if(e.where == 'history' && e.card.id){
-            $.get(Utils.protocol() + 'tmdb.cub.watch/watch?id='+e.card.id+'&cat='+(e.card.original_name ? 'tv' : 'movie'))
+            $.get(Utils.protocol() + 'tmdb.'+Manifest.cub_domain+'/watch?id='+e.card.id+'&cat='+(e.card.original_name ? 'tv' : 'movie'))
         }
     })
 
@@ -468,7 +559,7 @@ function startApp(){
 
         if(e.name == 'keyboard_type'){
             $('body').toggleClass('system--keyboard',Storage.field('keyboard_type') == 'lampa' ? false : true)
-        } 
+        }
     })
 
     /** End */
@@ -478,6 +569,8 @@ function startApp(){
     let torrent_net = new Reguest()
 
     function check(name) {
+        if(Platform.is('android') && !Storage.field('internal_torrclient')) return
+
         let item = $('[data-name="'+name+'"]').find('.settings-param__status').removeClass('active error wait').addClass('wait')
         let url  = Storage.get(name)
 
@@ -493,7 +586,7 @@ function startApp(){
                 }
             }
 
-            torrent_net.native(Utils.checkHttp(Storage.get(name)), ()=>{
+            torrent_net.native(Utils.checkEmptyUrl(Storage.get(name)), ()=>{
                 item.removeClass('wait').addClass('active')
             }, (a, c)=> {
                 if(a.status == 401){
@@ -517,6 +610,10 @@ function startApp(){
     })
 
     Settings.listener.follow('open', function (e){
+        if(e.name == 'more' && window.location.protocol == 'https:'){
+            $('[data-name="protocol"]',e.body).remove()
+        }
+
         if(e.name == 'server'){
             check(Storage.field('torrserver_use_link') == 'one' ? 'torrserver_url' : 'torrserver_url_two')
         }
@@ -586,7 +683,7 @@ function startApp(){
         if(e.code == 37 && psdg < 0){
             psdg = 0
         }
-        
+
         if(psdg >= 0 && mask[psdg] == e.code) psdg++
         else psdg = -1
 
@@ -598,6 +695,53 @@ function startApp(){
             Noty.show('God enabled')
 
             window.god_enabled = true
+        }
+    })
+
+    /** Start - активация полной лампы, жмем 🠔🠔 🠕🠕 🠔🠔 🠕🠕 */
+
+    let mask_full = [37,37,38,38,37,37,38,38],
+        psdg_full = -1
+
+    Keypad.listener.follow('keydown',(e)=>{
+        if(e.code == 37 && psdg_full < 0){
+            psdg_full = 0
+        }
+
+        if(psdg_full >= 0 && mask_full[psdg_full] == e.code) psdg_full++
+        else psdg_full = -1
+
+        if(psdg_full == 8){
+            psdg_full = -1
+
+            Noty.show('Full enabled')
+
+            window.localStorage.setItem('remove_white_and_demo','true')
+
+            let controller = Controller.enabled().name
+
+            Modal.open({
+                title: '',
+                align: 'center',
+                zIndex: 300,
+                html: $('<div class="about">'+Lang.translate('settings_interface_lang_reload')+'</div>'),
+                buttons: [
+                    {
+                        name: Lang.translate('settings_param_no'),
+                        onSelect: ()=>{
+                            Modal.close()
+
+                            Controller.toggle(controller)
+                        }
+                    },
+                    {
+                        name: Lang.translate('settings_param_yes'),
+                        onSelect: ()=>{
+                            window.location.reload()
+                        }
+                    }
+                ]
+            })
         }
     })
 
@@ -614,7 +758,7 @@ function startApp(){
         if(!Player.opened()){
             if(color_keys[e.code]){
                 let type = color_keys[e.code]
-                
+
                 Activity.push({
                     url: '',
                     title: type == 'book' ? Lang.translate('title_book') : type == 'like' ? Lang.translate('title_like'): type == 'history' ? Lang.translate('title_history') : Lang.translate('title_wath'),
@@ -627,7 +771,7 @@ function startApp(){
     })
 
     /** Обновление состояния карточек каждые 5 минут */
-    
+
     let last_card_update = Date.now()
     let lets_card_update = ()=>{
         if(last_card_update < Date.now() - 1000 * 60 * 5){
@@ -642,7 +786,7 @@ function startApp(){
             })
         }
     }
-    
+
     setInterval(()=>{
         if(!Player.opened()) lets_card_update()
     },1000 * 60)
@@ -660,42 +804,50 @@ function startApp(){
             })
         }
     })
-    
+
     /** End */
 }
 
-function checkProtocol(){
-    /*
-    if(window.location.protocol == 'https:'){
-        Modal.open({
-            title: '',
-            size: 'full',
-            html: Template.get('https',{}),
-            onBack: ()=>{
-
-            }
-        })
-
-        $('.welcome').fadeOut(500)
-    }
-    else{
-    */
+function loadLang(){
+    let code = window.localStorage.getItem('language') || 'ru'
+    let call = ()=>{
         /** Принудительно стартовать */
-
         setTimeout(startApp,1000*5)
 
         /** Загружаем плагины и стартуем лампу */
-
         Plugins.load(startApp)
-    //}
+    }
+
+
+    if(['ru','en'].indexOf(code) >= 0) call()
+    else{
+        $.ajax({
+            url: (location.protocol == 'file:' ? 'https://yumata.github.io/lampa/' : './') + 'lang/' + code + '.js',
+            dataType: 'text',
+            timeout: 10000,
+            success: (data)=>{
+                let translate = {}
+
+                try{
+                    eval((data + '').replace(/export default/g,'translate = ').trim())
+                }
+                catch(e){}
+
+                Lang.AddTranslation(code, translate)
+
+                call()
+            },
+            error: call
+        })
+    }
 }
 
 function loadApp(){
     prepareApp()
 
-    
+
     if(window.localStorage.getItem('language') || !window.lampa_settings.lang_use){
-        developerApp(checkProtocol)
+        developerApp(loadLang)
     }
     else{
         LangChoice.open((code)=>{
@@ -704,7 +856,7 @@ function loadApp(){
 
             Keypad.disable()
 
-            checkProtocol()
+            loadLang()
         })
 
         Keypad.enable()

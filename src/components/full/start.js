@@ -18,6 +18,7 @@ import Event from '../../utils/event'
 import Noty from '../../interaction/noty'
 import Account from '../../utils/account'
 import Loading from '../../interaction/loading'
+import Manifest from '../../utils/manifest'
 
 function create(data, params = {}){
     let html
@@ -123,6 +124,10 @@ function create(data, params = {}){
             html.find('.is--serial').removeClass('hide')
         }
 
+        if(data.movie.vote_average == 0){
+            html.find('.rate--tmdb').addClass('hide')
+        }
+
         if(data.movie.imdb_rating && parseFloat(data.movie.imdb_rating) > 0){
             html.find('.rate--imdb').removeClass('hide').find('> div').eq(0).text(data.movie.imdb_rating)
         }
@@ -160,8 +165,8 @@ function create(data, params = {}){
             } 
         }
 
-        if(data.movie.vote_count){
-            info.push('<span>'+Lang.translate('title_rewiews')+': '+data.movie.vote_count+'</span>')
+        if(data.movie.status){
+            html.find('.full-start__status').removeClass('hide').text(Lang.translate('tv_status_' + data.movie.status.toLowerCase().replace(/ /g,'_')))
         }
 
 
@@ -234,19 +239,22 @@ function create(data, params = {}){
 
         this.bookmarks()
 
+        this.reactions()
+
         let pg = Api.sources.tmdb.parsePG(data.movie)
 
         if(pg) html.find('.full-start__pg').removeClass('hide').text(pg)
         
+        if(window.lampa_settings.read_only) html.find('.button--play').remove()
     }
 
     this.setBtnInPriority = function(btn){
-        let cont = $('.full-start-new__buttons')
+        let cont = html.find('.full-start-new__buttons')
         let clon = btn.clone()
 
         cont.find('.button--priority').remove()
         
-        clon.addClass('button--priority').on('hover:enter',()=>{
+        clon.addClass('button--priority').removeClass('view--torrent').on('hover:enter',()=>{
             btn.trigger('hover:enter')
         }).on('hover:long',()=>{
             clon.remove()
@@ -261,43 +269,202 @@ function create(data, params = {}){
         cont.prepend(clon)
     }
 
+    this.vote = function(type, add){
+        let mine = Storage.get('mine_reactions',{})
+        let id   = (data.movie.name ? 'tv' : 'movie') + '_' + data.movie.id
+
+        if(!mine[id]) mine[id] = []
+
+        let ready = mine[id].indexOf(type) >= 0 
+
+        if(add){
+            if(!ready) mine[id].push(type)
+
+            Storage.set('mine_reactions',mine)
+        }
+
+        return ready
+    }
+
+    this.reactions = function(){
+        if(!Storage.field('card_interfice_reactions')) return html.find('.full-start-new__reactions, .button--reaction').remove()
+
+        let drawReactions = ()=>{
+            if(data.reactions && data.reactions.result && data.reactions.result.length){
+                let reactions = data.reactions.result
+                let reactions_body = html.find('.full-start-new__reactions')[0]
+    
+                reactions.sort((a,b)=>{
+                    return a.counter > b.counter ? -1 : a.counter < b.counter ? 1 : 0
+                })
+
+                reactions_body.empty()
+    
+                reactions.forEach(r=>{
+                    let reaction = document.createElement('div'),
+                        icon     = document.createElement('img'),
+                        count    = document.createElement('div'),
+                        wrap     = document.createElement('div')
+    
+                    reaction.addClass('reaction')
+                    icon.addClass('reaction__icon')
+                    count.addClass('reaction__count')
+    
+                    reaction.addClass('reaction--' + r.type)
+    
+                    count.text(Utils.bigNumberToShort(r.counter))
+    
+                    icon.src = Utils.protocol() + Manifest.cub_domain + '/img/reactions/' + r.type + '.svg'
+    
+                    reaction.append(icon)
+                    reaction.append(count)
+    
+                    wrap.append(reaction)
+    
+                    if(this.vote(r.type)) reaction.addClass('reaction--voted')
+    
+                    reactions_body.append(wrap)
+                })
+            }
+        }
+
+        let items = [
+            {type: 'fire'},
+            {type: 'nice'},
+            {type: 'think'},
+            {type: 'bore'},
+            {type: 'shit'}
+        ]
+
+        items.forEach(a=>{
+            a.template = 'selectbox_icon',
+            a.icon     = '<img src="'+Utils.protocol() + Manifest.cub_domain + '/img/reactions/' + a.type + '.svg'+'" />'
+            a.ghost    = this.vote(a.type)
+            a.noenter  = a.ghost
+            a.title    = Lang.translate('reactions_' + a.type)
+        })
+
+        html.find('.button--reaction').on('hover:enter',()=>{
+            Select.show({
+                title: Lang.translate('title_reactions'),
+                items: items,
+                onSelect: (a)=>{
+                    Controller.toggle('full_start')
+
+                    Api.sources.cub.reactionsAdd({
+                        method: data.movie.name ? 'tv' : 'movie',
+                        id: data.movie.id,
+                        type: a.type
+                    },()=>{
+                        this.vote(a.type, true)
+
+                        let find = data.reactions.result.find(r=>r.type == a.type)
+
+                        if(find) find.counter++
+                        else{
+                            data.reactions.result.push({
+                                type: a.type,
+                                counter: 1
+                            })
+                        }
+
+                        a.ghost   = true
+                        a.noenter = true
+
+                        drawReactions()
+                    },(e)=>{
+                        Lampa.Noty.show(Lang.translate('reactions_ready'))
+                    })
+                },
+                onBack: ()=>{
+                    Controller.toggle('full_start')
+                }
+            })
+        })
+
+        drawReactions()
+    }
+
     this.bookmarks = function(){
         html.find('.button--book').on('hover:enter',()=>{
             let status = Favorite.check(params.object.card)
             let items  = [
                 {
-                    title: Lang.translate('card_book_add'),
+                    title: Lang.translate('title_book'),
                     type: 'book',
                     checkbox: true,
                     checked: status.book,
                 },
                 {
-                    title: Lang.translate('card_like_add'),
+                    title: Lang.translate('title_like'),
                     type: 'like',
                     checkbox: true,
                     checked: status.like,
                 },
                 {
-                    title: Lang.translate('card_wath_add'),
+                    title: Lang.translate('title_wath'),
                     type: 'wath',
                     checkbox: true,
                     checked: status.wath,
+                },
+                {
+                    title: Lang.translate('menu_history'),
+                    type: 'history',
+                    checkbox: true,
+                    checked: status.history,
+                },
+
+                {
+                    title: Lang.translate('settings_cub_status'),
+                    separator: true
                 }
             ]
 
+            let marks = ['look', 'viewed', 'scheduled', 'continued', 'thrown']
+            let label = (a)=>{
+                params.object.card        = data.movie
+                params.object.card.source = params.object.source
+
+                Favorite.toggle(a.type, params.object.card)
+
+                if(a.collect) Controller.toggle('full_start')
+
+                this.favorite()
+            }
+
+            marks.forEach(m=>{
+                items.push({
+                    title: Lang.translate('title_'+m),
+                    type: m,
+                    picked: status[m],
+                    collect: true,
+                    noenter: !Account.hasPremium()
+                })
+            })
+
             Select.show({
-                title: Lang.translate('title_book'),
+                title: Lang.translate('settings_input_links'),
                 items: items,
-                onCheck: (a)=>{
-                    params.object.card        = data.movie
-                    params.object.card.source = params.object.source
-
-                    Favorite.toggle(a.type, params.object.card)
-
-                    this.favorite()
-                },
+                onCheck: label,
+                onSelect: label,
                 onBack: ()=>{
                     Controller.toggle('full_start')
+                },
+                onDraw: (item, elem)=>{
+                    if(elem.collect){
+                        if(!Account.hasPremium()){
+                            let wrap = $('<div class="selectbox-item__lock"></div>')
+                                wrap.append(Template.js('icon_lock'))
+
+                            item.append(wrap)
+
+                            item.on('hover:enter', ()=>{
+                                Select.close()
+
+                                Account.showCubPremium()
+                            })
+                        }
+                    }
                 }
             })
         })
@@ -384,12 +551,11 @@ function create(data, params = {}){
                         subtitle: (element.official ? Lang.translate('full_trailer_official') : Lang.translate('full_trailer_no_official')) + ' - ' + date,
                         id: element.key,
                         player: element.player,
-                        url: element.url,
                         code: element.iso_639_1,
                         time: new Date(element.published_at).getTime(),
-                        url: 'https://www.youtube.com/watch?v=' + element.key,
-                        youtube: true,
-                        icon: '<img class="size-youtube" src="https://img.youtube.com/vi/'+element.key+'/default.jpg" />',
+                        url: element.url || 'https://www.youtube.com/watch?v=' + element.key,
+                        youtube: typeof element.youtube !== 'undefined' ? element.youtube : true,
+                        icon: '<img class="size-youtube" src="'+(element.icon || 'https://img.youtube.com/vi/'+element.key+'/default.jpg')+'" />',
                         template: 'selectbox_icon'
                     })
                 })
@@ -421,16 +587,15 @@ function create(data, params = {}){
                     onSelect: (a)=>{
                         this.toggle()
 
-                        let playlist = al_lang.filter(v=>!v.separator)
-
-                        Player.play(a)
-                        Player.playlist(playlist)
-
-                        /*
-                        if(Platform.is('android')){
+                        if(Platform.is('android') && Storage.field('player_launch_trailers') == 'youtube' && a.youtube){
                             Android.openYoutube(a.id)
                         }
-                        */
+                        else{
+                            let playlist = al_lang.filter(v=>!v.separator)
+
+                            Player.play(a)
+                            Player.playlist(playlist)
+                        }
                     },
                     onBack: ()=>{
                         Controller.toggle('full_start')
@@ -569,13 +734,7 @@ function create(data, params = {}){
 
     this.favorite = function(){
         let status = Favorite.check(params.object.card)
-        let any    = status.book || status.like || status.wath
-
-        $('.info__icon',html).not('.button--subscribe').removeClass('active')
-
-        $('.icon--book',html).toggleClass('active',status.book)
-        $('.icon--like',html).toggleClass('active',status.like)
-        $('.icon--wath',html).toggleClass('active',status.wath)
+        let any    = Favorite.checkAnyNotHistory(status)
 
         $('.button--book path', html).attr('fill', any ? 'currentColor' : 'transparent')
     }
@@ -611,13 +770,8 @@ function create(data, params = {}){
                 else this.onDown()
             },
             up: ()=>{
-                let inbuttons = this.render().find('.full-start__buttons .focus').length
-                
                 if(Navigator.canmove('up')) Navigator.move('up')
-                else if(inbuttons) {
-                    Navigator.focus(this.render().find('.full-start__left .selector')[0])
-                }
-                else this.onUp()
+                this.onUp()
             },
             gone: ()=>{
 

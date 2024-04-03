@@ -1,5 +1,7 @@
 import Favorites from '../utils/favorites'
+import Locked from '../utils/locked'
 import Utils from '../utils/utils'
+import Pilot from '../utils/pilot'
 
 class Icons{
     constructor(listener){
@@ -23,14 +25,18 @@ class Icons{
         this.listener.follow('icons-load',(data)=>{
             this.icons = data.icons
 
-            this.icons.sort((a,b)=>{
-                let ta = a.added || 0
-                let tb = b.added || 0
+            if(data.menu.favorites){
+                this.icons.sort((a,b)=>{
+                    let ta = a.added || 0
+                    let tb = b.added || 0
+    
+                    return ta < tb ? -1 : ta > tb ? 1 : 0
+                })
 
-                return ta < tb ? -1 : ta > tb ? 1 : 0
-            })
+                this.sort()
+            }
 
-            if(data.menu.favorites) this.sort()
+            this.icons_clone = Lampa.Arrays.clone(this.icons)
 
             this.html.empty()
 
@@ -41,6 +47,17 @@ class Icons{
             this.last = false
 
             this.next()
+
+            let channel = Pilot.notebook('channel')
+
+            if(channel >= 0 && channel <= this.icons.length && window.lampa_settings.iptv){
+                setTimeout(()=>{
+                    this.listener.send('play',{
+                        position: channel,
+                        total: this.icons.length
+                    })
+                },1000)
+            }
         })
     }
 
@@ -70,6 +87,14 @@ class Icons{
         item.addClass('active')
     }
 
+    icon(item, element){
+        let icons = item.find('.iptv-channel__icons')
+            icons.empty()
+
+        if(Favorites.find(element)) icons.append(Lampa.Template.js('cub_iptv_icon_fav'))
+        if(Locked.find(Locked.format('channel', element))) icons.append(Lampa.Template.js('cub_iptv_icon_lock'))
+    }
+
     next(){
         let views = 10
         let start = this.position * views
@@ -81,6 +106,7 @@ class Icons{
             let body = document.createElement('div')
             let img  = document.createElement('img')
             let chn  = document.createElement('div')
+            let icn  = document.createElement('div')
 
             let position = start + index
 
@@ -90,12 +116,18 @@ class Icons{
             body.addClass('iptv-channel__body')
             img.addClass('iptv-channel__ico')
             chn.addClass('iptv-channel__chn')
+            icn.addClass('iptv-channel__icons')
 
             body.append(img)
             item.append(body)
             item.append(chn)
+            item.append(icn)
 
-            item.toggleClass('favorite', Boolean(Favorites.find(element)))
+            this.icon(item, element)
+
+            this.listener.follow('update-channel-icon',(channel)=>{
+                if(channel.name == element.name) this.icon(item, element)
+            })
 
             item.on('visible',()=>{
                 img.onerror = ()=>{
@@ -145,16 +177,44 @@ class Icons{
                     items: [
                         {
                             title: Lampa.Lang.translate(Favorites.find(element) ? 'iptv_remove_fav' : 'iptv_add_fav'),
+                            type: 'favorite'
+                        },
+                        {
+                            title: Lampa.Lang.translate(Locked.find(Locked.format('channel', element)) ? 'iptv_channel_unlock' : 'iptv_channel_lock' ),
+                            type: 'locked'
                         }
                     ],
                     onSelect: (a)=>{
-                        Favorites.toggle(element).finally(()=>{
-                            item.toggleClass('favorite', Boolean(Favorites.find(element)))
-
-                            this.listener.send('update-favorites')
-                        })
-
                         this.toggle()
+
+                        if(a.type == 'favorite'){
+                            Favorites.toggle(element).finally(()=>{
+                                this.icon(item, element)
+
+                                this.listener.send('update-favorites')
+                            })
+                        }
+                        else if(a.type == 'locked'){
+                            if(Lampa.Manifest.app_digital >= 204){
+                                if(Locked.find(Locked.format('channel', element))){
+                                    Lampa.ParentalControl.query(()=>{
+                                        this.toggle()
+
+                                        Locked.remove(Locked.format('channel', element)).finally(()=>{
+                                            this.icon(item, element)
+                                        })
+                                    },this.toggle.bind(this))
+                                }
+                                else{
+                                    Locked.add(Locked.format('channel', element)).finally(()=>{
+                                        this.icon(item, element)
+                                    })
+                                }
+                            }
+                            else{
+                                Lampa.Noty.show(Lampa.Lang.translate('iptv_need_update_app'))
+                            }
+                        }
                     },
                     onBack: this.toggle.bind(this)
                 })
