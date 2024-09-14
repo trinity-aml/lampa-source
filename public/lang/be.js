@@ -1131,4 +1131,8 @@ export default {
     full_crew: 'Яшчэ',
     full_editing: 'Рэдагаванне',
     full_creator: 'Стваральнік',
+    player_normalization_step_none: 'Нулявая',
+
+    settings_cub_backup_export_descr: 'Захаваць наладкі ў воблака',
+    settings_cub_backup_import_descr: 'Аднавіць налады з аблокі',
 }

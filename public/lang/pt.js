@@ -1110,5 +1110,9 @@ export default {
 
     full_crew: 'Mais',
     full_editing: 'Edição',
-    full_creator: 'Criador'
+    full_creator: 'Criador',
+    player_normalization_step_none: 'Zero',
+
+    settings_cub_backup_export_descr: 'Salvar configurações na nuvem',
+    settings_cub_backup_import_descr: 'Restaurar configurações da nuvem',
 }

@@ -1168,6 +1168,8 @@ body.true--mobile .head__action.open--settings {
 }
 body.true--mobile .head__menu-icon {
   display: block;
+  margin-left: 0.3em;
+  margin-right: 1.2em;
 }
 body.true--mobile .head__action {
   margin-left: 1em;
@@ -1910,6 +1912,12 @@ body.settings--open .settings__content {
 .items-line--type-collection {
   min-height: 15em;
 }
+.items-line--type-player-cards .items-line__head {
+  padding-left: 0.8em;
+}
+.items-line--type-player-cards .items-line__body .scroll__content {
+  padding: 0 1em;
+}
 
 .items-cards {
   display: -webkit-box;
@@ -2234,19 +2242,17 @@ body.settings--open .settings__content {
 }
 .card__vote {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: 0.3em;
+  bottom: 0.3em;
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
-  font-size: 1.4em;
+  font-size: 1.3em;
   font-weight: 700;
-  padding: 0.2em;
-  -webkit-border-top-left-radius: 0.3em;
-     -moz-border-radius-topleft: 0.3em;
-          border-top-left-radius: 0.3em;
-  -webkit-border-bottom-right-radius: 0.6em;
-     -moz-border-radius-bottomright: 0.6em;
-          border-bottom-right-radius: 0.6em;
+  font-weight: 700;
+  padding: 0.2em 0.5em;
+  -webkit-border-radius: 1em;
+     -moz-border-radius: 1em;
+          border-radius: 1em;
 }
 .card__textbox {
   position: absolute;
@@ -4214,6 +4220,14 @@ body.true--mobile.orientation--portrait .player-video__paused {
        -o-transform: translateY(0);
           transform: translateY(0);
 }
+.player-panel.panel--footer-open {
+  -webkit-transform: translateY(-130%);
+     -moz-transform: translateY(-130%);
+      -ms-transform: translateY(-130%);
+       -o-transform: translateY(-130%);
+          transform: translateY(-130%);
+  opacity: 0;
+}
 .player-panel__body {
   padding: 1.5em;
   position: relative;
@@ -5027,6 +5041,151 @@ body.true--mobile .player-info .head-backward__button {
   margin-top: 0;
 }
 
+.player-footer {
+  position: fixed;
+  left: 1.5em;
+  bottom: 1.5em;
+  right: 1.5em;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  -webkit-transform: translateY(130%);
+     -moz-transform: translateY(130%);
+      -ms-transform: translateY(130%);
+       -o-transform: translateY(130%);
+          transform: translateY(130%);
+  -webkit-transition: opacity 0.3s, -webkit-transform 0.3s;
+  transition: opacity 0.3s, -webkit-transform 0.3s;
+  -o-transition: opacity 0.3s, -o-transform 0.3s;
+  -moz-transition: transform 0.3s, opacity 0.3s, -moz-transform 0.3s;
+  transition: transform 0.3s, opacity 0.3s;
+  transition: transform 0.3s, opacity 0.3s, -webkit-transform 0.3s, -moz-transform 0.3s, -o-transform 0.3s;
+  width: auto;
+  -webkit-border-radius: 0.5em;
+     -moz-border-radius: 0.5em;
+          border-radius: 0.5em;
+}
+@media screen and (max-width: 480px) {
+  .player-footer {
+    right: 0;
+    left: 0;
+    bottom: 0;
+  }
+}
+.player-footer.open {
+  -webkit-transform: translateY(0);
+     -moz-transform: translateY(0);
+      -ms-transform: translateY(0);
+       -o-transform: translateY(0);
+          transform: translateY(0);
+}
+.player-footer__body {
+  padding: 1.5em;
+  position: relative;
+}
+.player-footer .card-watched__body .card-watched__item {
+  display: none;
+}
+.player-footer .card-watched__body .card-watched__item:nth-child(1), .player-footer .card-watched__body .card-watched__item:nth-child(2) {
+  display: block;
+}
+
+.player-footer-card {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  line-height: 1.4;
+}
+.player-footer-card__left {
+  width: 7em;
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+}
+.player-footer-card__tags {
+  margin-bottom: 0.7em;
+}
+.player-footer-card__title {
+  font-size: 1.8em;
+}
+.player-footer-card__body {
+  padding-left: 2em;
+  padding-top: 0.5em;
+  -webkit-box-flex: 1;
+  -webkit-flex-grow: 1;
+     -moz-box-flex: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
+}
+.player-footer-card__poster {
+  position: relative;
+  padding-bottom: 150%;
+}
+.player-footer-card__poster img {
+  -webkit-border-radius: 0.3em;
+     -moz-border-radius: 0.3em;
+          border-radius: 0.3em;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+}
+.player-footer-card__text {
+  overflow: hidden;
+  -o-text-overflow: ".";
+  text-overflow: ".";
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  width: 70%;
+  font-size: 1.1em;
+  font-weight: 300;
+}
+.player-footer-card.notext .player-footer-card__text > * {
+  display: block;
+  background-color: rgba(255, 255, 255, 0.2);
+  -webkit-border-radius: 0.3em;
+     -moz-border-radius: 0.3em;
+          border-radius: 0.3em;
+  height: 0.8em;
+  margin-top: 0.6em;
+}
+.player-footer-card.notext .player-footer-card__text > *:nth-child(1) {
+  width: 80%;
+}
+.player-footer-card.notext .player-footer-card__text > *:nth-child(2) {
+  width: 100%;
+}
+.player-footer-card.notext .player-footer-card__text > *:nth-child(3) {
+  width: 60%;
+}
+
+.player-footer {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+body.platform--browser .player-footer,
+body.platform--nw .player-footer {
+  background-color: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(1em);
+          backdrop-filter: blur(1em);
+}
+
+@media screen and (min-width: 767px) {
+  .player-footer .card {
+    margin-bottom: 0 !important;
+  }
+
+  body.size--bigger .player-footer .card--collection {
+    font-size: 1em;
+  }
+  body.size--bigger .player-footer .card--collection {
+    width: 25%;
+  }
+}
 .selectbox {
   position: fixed;
   top: 0;
@@ -5234,6 +5393,47 @@ body.selectbox--open .selectbox__content {
   left: 0;
   height: 0.5em;
   background-color: #fff;
+}
+
+.birthday__poster {
+  position: relative;
+  padding-bottom: 65%;
+  background: url("../img/loader.svg") no-repeat 50% 50%;
+}
+.birthday__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  -o-object-fit: cover;
+     object-fit: cover;
+  -webkit-border-radius: 1em;
+     -moz-border-radius: 1em;
+          border-radius: 1em;
+  opacity: 0;
+  -webkit-transition: opacity 0.2s;
+  -o-transition: opacity 0.2s;
+  -moz-transition: opacity 0.2s;
+  transition: opacity 0.2s;
+}
+.birthday__text {
+  line-height: 1.4;
+  font-size: 1.1em;
+  margin-top: 2em;
+}
+.birthday__text a {
+  text-decoration: none;
+  color: #D8C39A;
+}
+.birthday.loaded .birthday__img {
+  opacity: 1;
+}
+.birthday.noload .birthday__poster {
+  -webkit-border-radius: 1em;
+     -moz-border-radius: 1em;
+          border-radius: 1em;
+  background: #585858 url("../img/logo.svg") no-repeat 50% 50%;
 }
 
 .info {
@@ -8972,6 +9172,11 @@ body.platform--netcast .torrent-item__ffprobe > div::before {
   background-color: #fff;
   color: #000;
 }
+.simple-button--filter > span {
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+}
 .simple-button--filter > div {
   font-size: 0.7em;
   padding: 0.3em 0.5em;
@@ -8983,6 +9188,17 @@ body.platform--netcast .torrent-item__ffprobe > div::before {
 }
 .simple-button--filter > div::first-letter {
   text-transform: uppercase;
+}
+@media screen and (min-width: 767px) {
+  .simple-button--filter {
+    overflow: hidden;
+  }
+  .simple-button--filter > div {
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+       text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .simple-button--invisible:not(.focus) {
   background-color: rgba(0, 0, 0, 0.07);
@@ -11192,6 +11408,7 @@ body.glass--style-opacity--medium .navigation-bar__body {
 }
 body.glass--style-opacity--medium .player-panel,
 body.glass--style-opacity--medium .player-info,
+body.glass--style-opacity--medium .player-footer,
 body.glass--style-opacity--medium .player-video__paused,
 body.glass--style-opacity--medium .player-video__loader,
 body.glass--style-opacity--medium .normalization {
@@ -11209,6 +11426,7 @@ body.glass--style-opacity--blacked .navigation-bar__body {
 }
 body.glass--style-opacity--blacked .player-panel,
 body.glass--style-opacity--blacked .player-info,
+body.glass--style-opacity--blacked .player-footer,
 body.glass--style-opacity--blacked .player-video__paused,
 body.glass--style-opacity--blacked .player-video__loader,
 body.glass--style-opacity--blacked .normalization {

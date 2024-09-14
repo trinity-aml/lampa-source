@@ -81,6 +81,11 @@ function url(u, params = {}){
         }
     }
 
+    // Добавляем проверку для запросов по жанрам
+    if (params.genres && u.indexOf('discover/') !== 0) {
+        u = 'discover/' + u;
+    }
+
     return TMDB.api(u)
 }
 

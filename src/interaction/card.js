@@ -146,7 +146,7 @@ function Card(data, params = {}){
             if(vote > 0){
                 let vote_elem = document.createElement('div')
                     vote_elem.classList.add('card__vote')
-                    vote_elem.innerText = vote
+                    vote_elem.innerText = vote >= 10 ? 10 : vote
 
                 this.card.querySelector('.card__view').appendChild(vote_elem)
             }
@@ -286,7 +286,7 @@ function Card(data, params = {}){
         if(status.book) this.addicon('book')
         if(status.like) this.addicon('like')
         if(status.wath) this.addicon('wath')
-        if(status.history) this.addicon('history')
+        if(status.history || Timeline.watched(data)) this.addicon('history')
 
         let any_marker = marks.find(m=>status[m])
 
