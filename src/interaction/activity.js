@@ -18,6 +18,7 @@ let fullout   = false
 let content
 let slides
 let maxsave
+let base
 
 function Activity(component, object){
     let slide = Template.js('activity')
@@ -237,6 +238,7 @@ function init(){
     content   = Template.js('activitys')
     slides    = content.querySelector('.activitys__slides')
     maxsave   = Storage.get('pages_save_total',5)
+    base      = document.querySelector('head base')
 
     parseStart()
 
@@ -326,6 +328,10 @@ function limit(){
  * Обновить адрес в строке из активности
  */
 function pushState(object, replace, mix){
+    let path = window.location.protocol == 'file:' ? '' : base ? '/' : ''
+
+    if(!window.lampa_settings.push_state) return window.history.pushState(null, null, path)
+
     let data = Arrays.clone(object)
 
     delete data.activity
@@ -337,12 +343,12 @@ function pushState(object, replace, mix){
     }
 
     let card = object.card || object.movie
-    let durl = card ? '?card=' + card.id + (object.method ? '&media=' + object.method : '') + (card.source ? '&source=' + card.source : '') : '?' + comp.join('&')
+    let durl = card ? '?card=' + card.id + (object.method ? '&media=' + object.method : '') + (object.source ? '&source=' + object.source : '') : '?' + comp.join('&')
 
     if(mix) durl += '&' + mix
 
-    if(replace) window.history.replaceState(null, null, durl)
-    else window.history.pushState(null, null, durl)
+    if(replace) window.history.replaceState(null, null, path + durl)
+    else window.history.pushState(null, null, path + durl)
 }
 
 /**
