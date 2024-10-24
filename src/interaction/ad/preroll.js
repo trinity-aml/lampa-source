@@ -4,25 +4,43 @@ import VPN from '../../utils/vpn'
 import Controller from '../controller'
 import VideoBlock from './video'
 import Personal from '../../utils/personal'
+import Utils from '../../utils/math'
+import Vast from './vast'
+import Platform from '../../utils/platform'
 
 let next  = 0
+let imasdk
 
 function init(){
-
+    if(Platform.is('android')){
+        Utils.putScriptAsync(['https://imasdk.googleapis.com/js/sdkloader/ima3.js'], false,false,()=>{
+            imasdk = true
+        })
+    }
 }
 
 function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
-function video(num, started, ended){
-    let item = new VideoBlock(num)
+function video(vast, num, started, ended){
+    let Blok = vast ? Vast : VideoBlock
+    let item = new Blok(num)
 
     item.listener.follow('launch', started)
 
     item.listener.follow('ended', ended)
 
-    item.listener.follow('empty', ended)
+    if(vast){
+        item.listener.follow('empty', ()=>{
+            video(false, num, started, ended)
+        })
+
+        item.listener.follow('error', ()=>{
+            video(false, num, started, ended)
+        })
+    }
+    else item.listener.follow('empty', ended)
 }
 
 function launch(call){
@@ -54,7 +72,7 @@ function launch(call){
         setTimeout(()=>{
             Controller.toggle(enabled)
 
-            video(1, ()=>{
+            video(imasdk, 1, ()=>{
                 html.remove()
             }, ()=>{
                 html.remove()
@@ -77,8 +95,6 @@ function launch(call){
 
 function show(data, call){
     if(window.god_enabled) return launch(call)
-
-    //return call()
 
     if(!Account.hasPremium() && next < Date.now() && !(data.torrent_hash || data.youtube || data.iptv || data.continue_play) && !Personal.confirm()){
         VPN.region((code)=>{

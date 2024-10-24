@@ -15,6 +15,10 @@ function Component(name, component_params = {}){
     let comp = Template.get('settings_'+name)
     let last
 
+    scrl.addSwipeDown(()=>{
+        Controller.back()
+    })
+
     /**
      * Обновить скролл
      */
@@ -51,6 +55,7 @@ function Component(name, component_params = {}){
         if(!window.lampa_settings.lang_use) comp.find('[data-name="light_version"]').prev().remove()
 
         scrl.render().find('.scroll__content').addClass('layer--wheight').data('mheight',$('.settings__head'))
+        scrl.render().css('max-height', window.innerWidth <= 480 ? window.innerHeight * 0.6 : 'unset')
 
         let clear = comp.find('.clear-storage')
 

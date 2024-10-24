@@ -20,11 +20,12 @@ function init(){
     body     = html.find('.settings__body')
     
     html.find('.settings__layer').on('click',(e)=>{
-        if(DeviceInput.canClick(e.originalEvent)) window.history.back()
+        if(DeviceInput.canClick(e.originalEvent)) Controller.back()
     })
 
     main = new Main()
     main.onCreate = create
+    main.swipeAction = swipeAction
 
     main.create()
 
@@ -44,6 +45,8 @@ function init(){
 
             $('body').toggleClass('settings--open',true)
 
+            html.addClass('animate')
+
             Activity.mixState('settings=main')
         },
         up: ()=>{
@@ -58,7 +61,11 @@ function init(){
             Controller.toggle('content')
         },
         gone: (to)=>{
-            if(to !== 'settings_component') $('body').toggleClass('settings--open',false)
+            if(to !== 'settings_component'){
+                $('body').toggleClass('settings--open',false)
+
+                html.removeClass('animate').removeClass('animate-down')
+            } 
         },
         back: ()=>{
             main.render().detach()
@@ -68,6 +75,14 @@ function init(){
             Activity.mixState()
         }
     })
+}
+
+function swipeAction(){
+    html.addClass('animate-down')
+
+    setTimeout(()=>{
+        Controller.back()
+    },200)
 }
 
 /**

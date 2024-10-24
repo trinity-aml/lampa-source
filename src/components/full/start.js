@@ -19,6 +19,7 @@ import Noty from '../../interaction/noty'
 import Account from '../../utils/account'
 import Loading from '../../interaction/loading'
 import Manifest from '../../utils/manifest'
+import Color from '../../utils/color'
 
 function create(data, params = {}){
     let html
@@ -156,7 +157,7 @@ function create(data, params = {}){
             let air = Utils.parseToDate(data.movie.next_episode_to_air.air_date)
             let now = Date.now()
 
-            let day = Math.round((air.getTime() - now)/(24*60*60*1000))
+            let day = Math.ceil((air.getTime() - now)/(24*60*60*1000))
             let txt = Lang.translate('full_next_episode')+': ' + Utils.parseTime(data.movie.next_episode_to_air.air_date).short + ' / '+Lang.translate('full_episode_days_left')+': ' + day
 
             if(day > 0){
@@ -711,21 +712,61 @@ function create(data, params = {}){
     this.loadPoster = function(){
         let im = html.find('.full--poster')
 
-        load_images.poster = im[0] || {}
+        if(window.innerWidth <= 480){
+            load_images.poster = new Image()
+            load_images.poster.crossOrigin = "Anonymous"
+        }
+        else load_images.poster = im[0] || {}
 
-        load_images.poster.onerror = function(e){
+        load_images.poster.onerror = (e)=>{
             load_images.poster.src = './img/img_broken.svg'
         }
 
-        load_images.poster.onload = function(e){
+        load_images.poster.onload = (e)=>{
             im.parent().addClass('loaded')
         }
 
         let poster
 
-        if(window.innerWidth <= 400){
+        if(window.innerWidth <= 480){
             if(data.movie.backdrop_path) poster = Api.img(data.movie.backdrop_path,'w1280')
             else if(data.movie.background_image) poster = data.movie.background_image
+
+            load_images.poster.onload = (e)=>{
+                Color.blurPoster(load_images.poster, im.width(), im.height(), (nim)=>{
+                    im[0].src = nim.src
+                    
+                    im.parent().addClass('loaded')
+
+                    setTimeout(()=>{
+                        im[0].style.transition = 'none'
+                    },500)
+
+                    let sc = this.mscroll.render(true)
+                    let an = 0
+                    let ts = 0
+                    let dl = window.innerHeight * 0.1
+
+                    let smoothParallax = ()=>{
+                        im[0].style.transform = 'translate3d(0, ' + ts * 0.35 + 'px, 0)'
+                        im[0].style.opacity   = ts >= dl ? Math.max(0, 1 - (ts - dl) / (window.innerHeight * 0.2)) : 1;
+
+                        an--
+
+                        if(an > 0) smoothParallax()
+                    }
+
+                    sc.addEventListener('scroll', function(e) {
+                        ts = sc.scrollTop
+                        
+                        if(an == 0){
+                            an = 100
+
+                            requestAnimationFrame(smoothParallax)
+                        }
+                    })
+                })
+            }
         }
 
         if(poster) html.find('.full-start__poster').addClass('background--poster')
@@ -756,6 +797,8 @@ function create(data, params = {}){
 
                 Controller.collectionSet(this.render())
                 Controller.collectionFocus(last || (btns.length ? btns.eq(0)[0] : false), this.render())
+
+                if(window.innerWidth <= 480) this.mscroll.render(true).scrollTop = 1
 
                 if(this.onToggle) this.onToggle(this)
             },
