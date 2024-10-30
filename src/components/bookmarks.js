@@ -8,6 +8,9 @@ import Utils from '../utils/math'
 import Timeline from '../interaction/timeline'
 import Storage from '../utils/storage'
 import Layer from '../utils/layer'
+import BookmarksFolder from '../interaction/bookmarks_folder'
+
+
 
 function component(object){
     let all      = Favorites.all()
@@ -22,10 +25,35 @@ function component(object){
             let category = ['look', 'scheduled', 'book', 'like', 'wath', 'viewed', 'continued','thrown']
             let lines    = []
             let voice    = []
+            let folders  = ['book','like','wath', 'viewed','scheduled','thrown']
+            let media    = ['movies','tv']
             
             category.forEach(a=>{
                 if(all[a].length){
                     let items = Arrays.clone(all[a].slice(0,20))
+
+                    if(folders.indexOf(a) > -1){
+                        let i = 0
+
+                        media.forEach(m=>{
+                            let filter = Utils.filterCardsByType(all[a], m)
+
+                            if(filter.length){
+                                Arrays.insert(items, i, {
+                                    cardClass: ()=>{
+                                        return new BookmarksFolder(filter,{
+                                            category: a,
+                                            media: m
+                                        })
+                                    }
+                                })
+
+                                i++
+                            }
+                        })
+
+                        items = items.slice(0,20)
+                    }
 
                     items.forEach(a=>a.ready = false)
 
