@@ -181,7 +181,9 @@ function keydownTrigger(e){
 	if (keycode == 8 || keycode == 27 || keycode == 461 || keycode == 10009 || keycode == 88) {
 		e.preventDefault()
 
-		if(window.appready) Activity.back()
+		if(window.god_enabled) Lampa.Noty.show('Keypad - [' + keycode + ']' + '[' + window.appready + '] run controller back')
+
+		if(window.appready) Controller.back()
 
 		return false
 	}

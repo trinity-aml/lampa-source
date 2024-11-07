@@ -254,6 +254,8 @@ function init(){
     },1500)
 
     window.addEventListener('popstate', () => {
+        if(window.god_enabled) Lampa.Noty.show('Popstate - ['+(fullout || wait)+']')
+
         if(fullout || wait) return
 
         Screensaver.stop()
@@ -402,7 +404,12 @@ function create(object){
  * Вызов обратно пользователем
  */
 function back(){
-    window.history.back();
+    listener.send('popstate',{count: activites.length})
+    
+    if(callback) callback()
+    else{
+        backward()
+    }
 }
 
 /**

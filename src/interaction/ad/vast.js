@@ -5,10 +5,34 @@ import Controller from '../controller'
 import Lang from '../../utils/lang'
 import Manifest from '../../utils/manifest'
 import Utils from '../../utils/math'
+import Platform from '../../utils/platform'
 
 let loaded_data = {
     ad: [],
     time: 0
+}
+
+function stat(method, name){
+    $.ajax({
+        dataType: 'text',
+        url: Utils.protocol() + Manifest.cub_domain + '/api/ad/stat?platform=' + Platform.get() + '&type=vast&method='+method+'&name=' + name
+    })
+}
+
+function log(name, msg){
+    if(typeof Sentry !== 'undefined'){
+        Sentry.captureMessage('AD - [' + name + '] ' + msg)
+    }
+
+    $.ajax({
+        dataType: 'text',
+        method: 'post',
+        url: Utils.protocol() + Manifest.cub_domain + '/api/payment/event_prime',
+        data: {
+            name,
+            msg
+        }
+    })
 }
 
 class Vast{
@@ -60,163 +84,110 @@ class Vast{
     start(){
         let block = this.get()
 
+        stat('launch', block.name)
+
         this.block = Template.js('ad_video_block')
-        this.last_controller = Controller.enabled().name
 
         this.block.find('video').remove()
 
         this.block.find('.ad-video-block__text').text(Lang.translate('ad')  + ' - ' + Lang.translate('ad_disable'))
         this.block.find('.ad-video-block__info').text('')
 
-        this.block.find('.ad-video-block__vast-line').removeClass('hide')
-
         let skip        = this.block.find('.ad-video-block__skip')
         let progressbar = this.block.find('.ad-video-block__progress-fill')
-
-        let adDisplayContainer
-        let adsLoader
-        let adsManager
-
-        let videoContent = this.block.find('video')
-        let adContainer = this.block.find('.ad-video-block__vast')
+        let player
+        let timer
 
         let adInterval
-        let isLinearAd = false
-        let skipTimer
-        let adDuration = 0
         let adReadySkip
-        let adTimer
+        let adStarted
+        let adDuration = 0
 
-        let error = ()=>{
+        let error = (code, msg)=>{
             this.block.remove()
 
-            if(adsManager) adsManager.destroy()
+            clearTimeout(timer)
 
-            if(adsLoader) adsLoader.destroy()
-
-            clearTimeout(adTimer)
+            console.log('Ad','error', code, msg)
 
             this.listener.send('error')
+
+            stat('error', block.name)
+            stat('error_' + code, block.name)
+
+            log(block.name, msg)
         }
 
-        function initializeIMA() {
-            // Создаем контейнер для объявлений
-            adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoContent)
-            adsLoader = new google.ima.AdsLoader(adDisplayContainer)
+        function initialize(){
+            player = new VASTPlayer(this.block.find('.ad-video-block__vast'))
 
-            // Регистрируем слушатель для получения рекламных ошибок
-            adsLoader.addEventListener(google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED, onAdsManagerLoaded.bind(this), false)
-            adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, onAdError.bind(this),false)
+            player.once('AdStopped', ()=> {
+                stat('complete', block.name)
 
-            // Загружаем рекламу
-            let adsRequest = new google.ima.AdsRequest()
-                adsRequest.adTagUrl = block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random())).replace('{TIME}',Date.now()) // Ссылка на VAST
-
-            // Указываем, что реклама должна воспроизводиться перед контентом
-            adsRequest.linearAdSlotWidth  = window.innerWidth
-            adsRequest.linearAdSlotHeight = window.innerHeight
-
-            adsLoader.requestAds(adsRequest)
-        }
-
-        function onAdsManagerLoaded(adsManagerLoadedEvent) {
-            // Инициализируем AdsManager, который контролирует рекламу
-            adsManager = adsManagerLoadedEvent.getAdsManager(videoContent)
-
-            adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, onAdError.bind(this))
-            adsManager.addEventListener(google.ima.AdEvent.Type.STARTED, onAdStarted.bind(this))
-            adsManager.addEventListener(google.ima.AdEvent.Type.IMPRESSION, onAdStarted.bind(this))
-            adsManager.addEventListener(google.ima.AdEvent.Type.COMPLETE, ()=>{
-                clearTimeout(adTimer)
-
-                adsManager.destroy()
-
-                adsLoader.destroy()
+                console.log('Ad', 'complete')
 
                 this.destroy()
-            },false)
+            })
 
-            try {
-                adDisplayContainer.initialize()
-                adsManager.init(window.innerWidth, window.innerHeight, google.ima.ViewMode.NORMAL)
-                adsManager.start()
-            } 
-            catch (adError) {
-                console.log('Ad','error','AdsManager could not be started')
+            player.load(block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random())).replace('{TIME}',Date.now())).then(()=> {
+                onAdStarted()
 
-                error()
-            }
+                return player.startAd()
+            }).catch((reason)=> {
+                error(100,reason)
+            })
         }
 
-        function onAdStarted(event) {
+        function onAdStarted() {
             console.log('Ad','event','STARTED')
 
-            let ad = event.getAd()
+            if(!adStarted) stat('started', block.name)
 
-            clearTimeout(adTimer)
+            adStarted = true
+
+            clearTimeout(timer)
 
             try{
                 this.block.find('.ad-video-block__loader').remove()
             }
             catch(e){}
 
-            if (ad.isLinear()) {
-                isLinearAd = true
-
-                // Отображаем полную продолжительность рекламы
-                adDuration = adsManager.getRemainingTime()
+            if (player.adDuration) {
+                adDuration = player.adDuration
 
                 clearInterval(adInterval)
 
-                // Обновляем прогресс рекламы каждую секунду
                 adInterval = setInterval(updateAdProgress, 100)
-
-                // Показываем кнопку "Пропустить" через 5 секунд, если это разрешено рекламой
-                if (ad.getSkipTimeOffset() !== -1) {
-                    clearTimeout(skipTimer)
-
-                    skipTimer = setTimeout(()=> {
-                        adReadySkip = true
-                    }, ad.getSkipTimeOffset() * 1000) // Отображаем кнопку через заданное время
-                }
             } 
-            else {
-                isLinearAd = false
-            }
         }
 
         function updateAdProgress() {
-            if (isLinearAd && adsManager) {
-                let remainingTime = adsManager.getRemainingTime()
+            let remainingTime = player.adRemainingTime
 
-                let progress = Math.min(100, (1 - remainingTime / adDuration) * 100)
+            let progress = Math.min(100, (1 - remainingTime / adDuration) * 100)
 
-                progressbar.style.width = progress + '%'
+            progressbar.style.width = progress + '%'
 
-                skip.find('span').text(Lang.translate(adReadySkip ? 'ad_skip' : Math.round(remainingTime)))
+            adReadySkip = progress > 60
 
-                if (remainingTime <= 0) {
-                    clearInterval(adInterval)
-                }
+            skip.find('span').text(Lang.translate(adReadySkip ? 'ad_skip' : Math.round(remainingTime)))
+
+            if (remainingTime <= 0) {
+                clearInterval(adInterval)
             }
         }
 
         function enter(){
             if (adReadySkip) {
-                clearTimeout(adTimer)
+                clearTimeout(timer)
+                clearInterval(adInterval)
 
-                adsManager.destroy()
-
-                adsLoader.destroy()
-
-                this.destroy()
+                player.stopAd().then(()=>{
+                    this.destroy()
+                }).catch(()=>{
+                    error(200, 'Cant stop ads')
+                })
             }
-        }
-
-        function onAdError(adErrorEvent) {
-            error()
-
-            console.log('Ad', 'error', adErrorEvent.getError().data.errorMessage)
         }
 
         this.block.on('click',enter.bind(this))
@@ -235,22 +206,24 @@ class Vast{
 
         this.listener.send('launch')
 
-        adTimer = setTimeout(error.bind(this),25000)
+        timer = setTimeout(()=>{
+            error(300,'Timeout')
+        },10000)
 
-        initializeIMA.apply(this)
+        console.log('Ad', 'run')
 
-        if(block.stat){
-            $.ajax({
-                dataType: 'text',
-                url: block.stat
-            })
+        try{
+            initialize.apply(this)
         }
+        catch(e){
+            error(400,'Initialize', e ? e.message : '')
+        }
+
+        stat('run', block.name)
     }
 
     destroy(){
         this.block.remove()
-
-        Controller.toggle(this.last_controller)
 
         this.listener.send('ended')
     }
