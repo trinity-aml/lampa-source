@@ -93,6 +93,7 @@ import ParentalControl from './interaction/parental_control'
 import Personal from './utils/personal'
 import Sound from './utils/sound'
 import AppStatus from './interaction/status'
+import Iptv from './utils/iptv'
 
 /**
  * Настройки движка
@@ -123,7 +124,9 @@ Arrays.extend(window.lampa_settings,{
 
     dcma: false,
 
-    push_state: true
+    push_state: true,
+
+    iptv: false
 })
 
 /**
@@ -137,91 +140,100 @@ if(window.localStorage.getItem('remove_white_and_demo')){
     window.lampa_settings.white_use    = false
 }
 
-window.Lampa = {
-    Listener: Subscribe(),
-    Lang,
-    Subscribe,
-    Storage,
-    Platform,
-    Utils,
-    Params,
-    Menu,
-    Head,
-    Notice,
-    NoticeClass,
-    NoticeClassLampa,
-    Background,
-    Favorite,
-    Select,
-    Controller,
-    Activity,
-    Keypad,
-    Template,
-    Component,
-    Reguest,
-    Filter,
-    Files,
-    Explorer,
-    Scroll,
-    Empty,
-    Arrays,
-    Noty,
-    Player,
-    PlayerVideo,
-    PlayerInfo,
-    PlayerPanel,
-    PlayerIPTV,
-    PlayerPlaylist,
-    Timeline,
-    Modal,
-    Api,
-    Cloud,
-    Settings,
-    SettingsApi,
-    Android,
-    Card,
-    Info,
-    Account,
-    Socket,
-    Input,
-    Screensaver,
-    Recomends,
-    VideoQuality,
-    TimeTable,
-    Broadcast,
-    Helper,
-    InteractionMain,
-    InteractionCategory,
-    InteractionLine,
-    Status,
-    Plugins,
-    Extensions,
-    Tizen,
-    Layer,
-    Console,
-    Iframe,
-    Parser,
-    Manifest,
-    TMDB,
-    Base64,
-    Loading,
-    YouTube,
-    WebOSLauncher,
-    Event,
-    Search,
-    DeviceInput,
-    Worker: AppWorker,
-    DB,
-    NavigationBar,
-    Endless,
-    Color,
-    Cache,
-    Torrent,
-    Torserver,
-    Speedtest,
-    Processing,
-    ParentalControl,
-    VPN
+if(window.lampa_settings.iptv){
+    window.lampa_settings.socket_use    = false
+    window.lampa_settings.plugins_store = false
+    window.lampa_settings.account_sync  = false
+    window.lampa_settings.torrents_use  = false
+}
+
+function initClass(){
+    window.Lampa = {
+        Listener: Subscribe(),
+        Lang,
+        Subscribe,
+        Storage,
+        Platform,
+        Utils,
+        Params,
+        Menu,
+        Head,
+        Notice,
+        NoticeClass,
+        NoticeClassLampa,
+        Background,
+        Favorite,
+        Select,
+        Controller,
+        Activity,
+        Keypad,
+        Template,
+        Component,
+        Reguest,
+        Filter,
+        Files,
+        Explorer,
+        Scroll,
+        Empty,
+        Arrays,
+        Noty,
+        Player,
+        PlayerVideo,
+        PlayerInfo,
+        PlayerPanel,
+        PlayerIPTV,
+        PlayerPlaylist,
+        Timeline,
+        Modal,
+        Api,
+        Cloud,
+        Settings,
+        SettingsApi,
+        Android,
+        Card,
+        Info,
+        Account,
+        Socket,
+        Input,
+        Screensaver,
+        Recomends,
+        VideoQuality,
+        TimeTable,
+        Broadcast,
+        Helper,
+        InteractionMain,
+        InteractionCategory,
+        InteractionLine,
+        Status,
+        Plugins,
+        Extensions,
+        Tizen,
+        Layer,
+        Console,
+        Iframe,
+        Parser,
+        Manifest,
+        TMDB,
+        Base64,
+        Loading,
+        YouTube,
+        WebOSLauncher,
+        Event,
+        Search,
+        DeviceInput,
+        Worker: AppWorker,
+        DB,
+        NavigationBar,
+        Endless,
+        Color,
+        Cache,
+        Torrent,
+        Torserver,
+        Speedtest,
+        Processing,
+        ParentalControl,
+        VPN
+    }
 }
 
 function closeApp(){
@@ -231,7 +243,7 @@ function closeApp(){
     if(Platform.is('android')) Android.exit()
     if(Platform.is('orsay')) Orsay.exit()
     if(Platform.is('netcast')) window.NetCastBack()
-    if(Platform.is('noname') && typeof window.close == 'function') window.close()
+    if(Platform.is('noname')) window.history.back()
 }
 
 function popupCloseApp(){
@@ -313,7 +325,7 @@ function prepareApp(){
     /** Выход в начальном скрине */
 
     Keypad.listener.follow('keydown',(e)=>{
-        if(window.appready || Controller.enabled().name == 'modal') return
+        if(window.appready || Controller.enabled().name == 'modal' || (Platform.is('browser') || Platform.desktop())) return
 
         if (e.code == 8 || e.code == 27 || e.code == 461 || e.code == 10009 || e.code == 88) popupCloseApp()
     })
@@ -490,7 +502,9 @@ function startApp(){
     Activity.listener.follow('backward',(event)=>{
         if(!start_time) start_time = Date.now()
 
-        if(event.count == 1 && Date.now() > start_time + (1000 * 2)){
+        let noout = Platform.is('browser') || Platform.desktop()
+
+        if(event.count == 1 && Date.now() > start_time + (1000 * 2) && !noout){
             let enabled = Controller.enabled()
 
             Select.show({
@@ -535,6 +549,10 @@ function startApp(){
     Notice.drawCount()
 
     AppStatus.push('Notice ready')
+
+    /** Временно вырезаем все для iptv, чтоб пройти модерацию */
+
+    window.lampa_settings.iptv && Iptv.init()
 
     /** Обновляем слои */
 
@@ -724,6 +742,8 @@ function startApp(){
     AppStatus.push('Connecting libraries')
 
     Utils.putScript(video_libs,()=>{})
+
+    Utils.putScript([Utils.protocol() + Manifest.cub_domain + '/plugin/black-friday'],()=>{})
 
     /** Сообщаем о готовности */
 
@@ -948,6 +968,8 @@ function loadApp(){
 
 if(!window.fitst_load){
     window.fitst_load = true
+
+    initClass()
     
     if(navigator.userAgent.toLowerCase().indexOf('lampa_client') > -1){
         function checkReady(){

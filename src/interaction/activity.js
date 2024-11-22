@@ -323,6 +323,8 @@ function limit(){
         if(first.activity){
             first.activity.destroy()
 
+            Lampa.Listener.send('activity',{component: first.component, type: 'destroy', object: first})
+
             first.activity = null
         } 
     } 
@@ -557,7 +559,15 @@ function last(){
     let active = Storage.get('activity','false')
     let start_from = Storage.field("start_page")
 
-    if(window.start_deep_link){
+    if(window.lampa_settings.iptv){
+        active = {
+            component: 'iptv',
+            page: 1
+        }
+
+        push(active)
+    }
+    else if(window.start_deep_link){
         push(window.start_deep_link)
     }
     else if(active && start_from === "last"){
@@ -643,7 +653,11 @@ function replace(replace = {}, clear){
         object[i] = replace[i]
     }
 
-    active().activity.destroy()
+    let made = active()
+
+    made.activity.destroy()
+
+    Lampa.Listener.send('activity',{component: made.component, type: 'destroy', object: made})
 
     activites.pop()
 
