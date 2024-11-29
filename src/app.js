@@ -537,6 +537,9 @@ function startApp(){
         }
     })
 
+    ParentalControl.add('bookmarks',{
+        title: 'settings_input_links'
+    })
 
     /** Ренедрим лампу */
 
@@ -686,15 +689,15 @@ function startApp(){
                         <div class="ad-server__text">
                             Арендовать ссылку на сервер без установки и настроек.
                         </div>
-                        <img src="https://i.ibb.co/0MwCbNt/qr-code-3.png" class="ad-server__qr">
-                        <div class="ad-server__label">Реклама - https://tsarea.us</div>
+                        <img src="https://i.ibb.co/6YsXH0H/qr-code-4-1.png" class="ad-server__qr">
+                        <div class="ad-server__label">Реклама - https://tsarea.tv</div>
                     </div>
                 `)
 
                 $('[data-name="torrserver_use_link"]',e.body).after(ad)
             }
         }
-        else torrent_net.clear()
+        else torrent_net.clear() 
 
         if(e.name == 'interface' && window.lampa_settings.lang_use){
             $('.settings-param:eq(0)',e.body).on('hover:enter',()=>{
