@@ -1,6 +1,17 @@
 import Storage from './storage'
 import Api from '../interaction/api'
 import Lang from './lang'
+import Manifest from './manifest'
+
+/**
+ * Преобразование секунд в формат времени
+ * @doc
+ * @name secondsToTime
+ * @alias Utils
+ * @param {integer} sec время в секундах
+ * @param {boolean} short короткое время
+ * @returns {string} (hours : minutes : seconds) или (minutes : seconds)
+ */
 
 function secondsToTime(sec, short){
     var sec_num = parseInt(sec, 10);
@@ -21,11 +32,30 @@ function secondsToTime(sec, short){
     return hours+':'+minutes+':'+seconds;
 }
 
+/**
+ * Преабразует первую букву строки в верхний регистр
+ * @doc
+ * @name capitalizeFirstLetter
+ * @alias Utils
+ * @param {string} string значение
+ * @returns {string}
+ */
+
 function capitalizeFirstLetter(string) {
     string = string + ''
 
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
+
+/**
+ * Сокращает строку до указанной длины
+ * @doc
+ * @name substr
+ * @alias Utils
+ * @param {string} txt текст
+ * @param {integer} len длина
+ * @returns {string}
+ */
 
 function substr(txt,len){
     txt = txt || '';
@@ -221,6 +251,18 @@ function checkEmptyUrl(url){
 
 function rewriteIfHTTPS(u){
     return window.location.protocol == 'https:' ? u.replace(/(http:\/\/|https:\/\/)/g, 'https://') : u
+}
+
+function fixProtocolLink(u){
+    return rewriteIfHTTPS((localStorage.getItem('protocol') || 'https') + '://' + u.replace(/(http:\/\/|https:\/\/)/g, ''))
+}
+
+function fixMirrorLink(u){
+    Manifest.cub_mirrors.forEach(mirror=>{
+        u = u.replace('://' + mirror, '://' + Manifest.cub_domain)
+    })
+
+    return u
 }
 
 function shortText(fullStr, strLen, separator){
@@ -675,6 +717,40 @@ function buildUrl(baseUrl, path, queryParams) {
     return url + (queryString ? '?' + queryString : '');
 }
 
+function simpleMarkdownParser(input) {
+    // Обработка заголовков #
+    input = input.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    input = input.replace(/^#+ (.*$)/gim, '<h4>$1</h4>');
+
+    // Обработка жирного текста **текст**
+    input = input.replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>');
+
+    // Обработка списков * пункт
+    input = input.replace(/^\* (.*$)/gim, '<li>$1</li>');
+
+    // Обработка курсивного текста *текст*
+    input = input.replace(/\*(.*?)\*/gim, '<i>$1</i>');
+
+    // Оборачивание текста в <p>, если он не является частью других тегов
+    input = input.replace(/^(?!<h1>|<h4>|<li>|<b>|<i>)(.+)$/gim, '<p>$1</p>');
+
+    input = input.replace(/<li>/gim, '<p>');
+    input = input.replace(/<\/li>/gim, '</p>');
+
+    // Удаление лишних переносов строк
+    input = input.replace(/\n/gim, '');
+
+    return input;
+}
+
+function callWaiting(needCall, emergencyCall, time = 10000){
+    let timer = setTimeout(emergencyCall, time)
+
+    needCall(()=>{
+        clearTimeout(timer)
+    })
+}
+
 export default {
     secondsToTime,
     secondsToTimeHuman,
@@ -719,5 +795,9 @@ export default {
     dcma,
     inputDisplay,
     filterCardsByType,
-    buildUrl
+    buildUrl,
+    simpleMarkdownParser,
+    fixProtocolLink,
+    fixMirrorLink,
+    callWaiting
 }

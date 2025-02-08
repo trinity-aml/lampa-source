@@ -3,9 +3,10 @@ import Storage from '../../utils/storage'
 import Account from '../../utils/account'
 import Manifest from '../../utils/manifest'
 import Lang from '../../utils/lang'
+import Utils from '../../utils/math'
 
 function init(){
-    if(Account.logged() && Lang.selected(['ru','uk','be','bg'])){
+    if(Account.logged() && Lang.selected(['ru','uk','be','bg']) && window.lampa_settings.account_use){
         let user = Storage.get('account_user','{}')
 
         if(user.premium && !Account.hasPremium()) setTimeout(push,5000)
@@ -13,7 +14,8 @@ function init(){
 }
 
 function push(){
-    let id = 'extend_premium'
+    let now = new Date()
+    let id  = 'extend_premium_' + now.getFullYear() + '_' + now.getMonth()
     
     if(Notice.classes.lampa.notices.find(n=>n.id == id)) return
 
@@ -33,7 +35,7 @@ function push(){
             bg: 'Вашият абонамент за CUB Premium е изтекъл! Не пропускайте шанса си да подновите достъпа си до ексклузивно съдържание и допълнителни функции. Надстройте до премиум статус сега и се насладете на всички предимства на CUB без ограничения!'
         },
         time: Date.now(),
-        icon: 'https://'+Manifest.cub_domain+'/img/icons/premium_two.svg'
+        icon: Utils.protocol() + Manifest.cub_domain+'/img/icons/premium_two.svg'
     }
 
     Notice.pushNotice('lampa',notice, ()=>{

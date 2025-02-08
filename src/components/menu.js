@@ -29,9 +29,14 @@ function init(){
 
     if(!window.lampa_settings.torrents_use) html.find('[data-action="mytorrents"]').remove()
 
+    if(window.lampa_settings.disable_features.persons) html.find('[data-action="myperson"]').remove()
+    if(window.lampa_settings.disable_features.subscribe) html.find('[data-action="subscribes"]').remove()
+
     if(!Lang.selected(['ru','uk','be'])){
         html.find('[data-action="relise"],[data-action="anime"],[data-action="feed"]').remove()
     }
+
+    if(!window.lampa_settings.feed) html.find('[data-action="feed"]').remove()
 
     Lampa.Listener.send('menu',{type:'start',body: html})
 
@@ -55,6 +60,10 @@ function init(){
     scroll.append(html)
 
     Lampa.Listener.send('menu',{type:'end'})
+
+    Lampa.Listener.follow('app',e=>{
+        if(e.type == 'ready') ready()
+    })
 }
 
 function observe(){
@@ -336,7 +345,11 @@ function ready(){
         }
 
         if(action == 'search')   Controller.toggle('search')
-        if(action == 'settings') Controller.toggle('settings')
+        if(action == 'settings'){
+            ParentalControl.personal('settings',()=>{
+                Controller.toggle('settings')
+            }, false, true)
+        } 
         if(action == 'about'){
             let about = Template.get('about')
 
@@ -365,13 +378,28 @@ function ready(){
 
         if(action == 'favorite'){
             ParentalControl.personal('bookmarks',()=>{
-                Activity.push({
-                    url: '',
-                    title: Lang.translate(type == 'book' ? 'settings_input_links' : 'title_history'),
-                    component: type == 'history' ? 'favorite' : 'bookmarks',
-                    type: type,
-                    page: 1
-                })
+                if(prepared('bookmarks',['bookmarks'])){
+                    Activity.push({
+                        url: '',
+                        title: Lang.translate('settings_input_links'),
+                        component: 'bookmarks',
+                        page: 1
+                    })
+                }
+            }, false, true)
+        }
+
+        if(action == 'history'){
+            ParentalControl.personal('bookmarks',()=>{
+                if(prepared('favorite',['favorite'])){
+                    Activity.push({
+                        url: '',
+                        title: Lang.translate('title_history'),
+                        component: 'favorite',
+                        type: 'history',
+                        page: 1
+                    })
+                }
             }, false, true)
         }
 

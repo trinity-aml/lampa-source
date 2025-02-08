@@ -201,9 +201,7 @@ function component(object){
                 })
             }
 
-            html.on('hover:enter',()=>{
-                
-            }).on('hover:focus',(e)=>{
+            html.on('hover:focus',(e)=>{
                 last = e.target
     
                 scroll.update($(e.target), true)
@@ -255,10 +253,11 @@ function component(object){
             toggle: ()=>{
                 Controller.collectionSet(scroll.render(), explorer.render())
                 Controller.collectionFocus(last || false,scroll.render())
+                Navigator.remove(explorer.render().find('.explorer-card__head-img')[0])
             },
             left: ()=>{
                 if(Navigator.canmove('left')) Navigator.move('left')
-                else Controller.toggle('menu')
+                else explorer.toggle()
             },
             right: ()=>{
                 filter.show(Lang.translate('title_filter'),'filter')

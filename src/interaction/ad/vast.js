@@ -129,7 +129,7 @@ class Vast{
             stat('error', block.name)
             stat('error_' + code, block.name)
 
-            if(code !== 500) log(block.name, msg)
+            //if(code !== 500) log(block.name, msg)
         }
 
         function initialize(){
@@ -211,7 +211,7 @@ class Vast{
 
             progressbar.style.width = progress + '%'
 
-            adReadySkip = progress > 60
+            adReadySkip = progress > (block.progress || 60)
 
             skip.find('span').text(Lang.translate(adReadySkip ? 'ad_skip' : Math.round(remainingTime)))
 

@@ -6,6 +6,8 @@ import Noty from '../interaction/noty'
 import Android from '../utils/android'
 import Lang from './lang'
 import Platform from './platform'
+import Manifest from './manifest'
+import Mirrors from './mirrors'
 
 function create(){
     let listener = Subscribe();
@@ -16,7 +18,7 @@ function create(){
     var last_reguest
 
     let need = {
-        timeout: 1000 * 60
+        timeout: 1000 * 30
     }
 
     this.timeout = function(time){
@@ -251,6 +253,10 @@ function create(){
         return errorDecode(jqXHR, exception)
     }
 
+    this.errorCode = function(jqXHR){
+        return errorCode(jqXHR)
+    }
+
     function errorDecode(jqXHR, exception){
         if(!Arrays.isObject(jqXHR)) return Lang.translate('network_error')
 
@@ -283,6 +289,10 @@ function create(){
         return msg;
     }
 
+    function errorCode(jqXHR){
+        return jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON.code : jqXHR ? jqXHR.status : 404
+    }
+
 
     /**
      * Сделать запрос
@@ -290,6 +300,11 @@ function create(){
      */
     function go(params){
         var error = function(jqXHR, exception){
+            jqXHR.decode_error = errorDecode(jqXHR, exception);
+            jqXHR.decode_code  = errorCode(jqXHR);
+
+            Lampa.Listener.send('request_error', {params, error: jqXHR});
+            
             console.log('Request','error of '+params.url+' :', errorDecode(jqXHR, exception));
 
             if(params.before_error) params.before_error(jqXHR, exception);
@@ -310,6 +325,8 @@ function create(){
         if(params.start) params.start();
 
         let secuses = function(data){
+            Lampa.Listener.send('request_secuses', {params, data});
+
             if(params.before_complite) params.before_complite(data);
 
             if(params.complite){
@@ -329,11 +346,12 @@ function create(){
         }
 
         let datatype = params.dataType || 'json';
+        let timeout  = !Mirrors.connected() && params.url.indexOf(Manifest.cub_domain) >= 0 ? 2000 : params.timeout || need.timeout;
 
         let data = {
             dataType: datatype,
             url: params.url,
-            timeout: need.timeout,
+            timeout: timeout,
             crossDomain: true,
             success: (data) => {
                 if(datatype == 'json' && !data) error({status: 500})
@@ -345,7 +363,7 @@ function create(){
 				let srv = Storage.get(Storage.field('torrserver_use_link') == 'two' ? 'torrserver_url_two' : 'torrserver_url')
 
 				if(use && srv && params.url.indexOf(srv) >= 0){
-                    let authorization = "Basic " + Base64.encode(Storage.get('torrserver_login')+':'+Storage.get('torrserver_password'))
+                    let authorization = "Basic " + Base64.encode(Storage.get('torrserver_login')+':'+Storage.value('torrserver_password'))
 
                     console.log('Request','authorization:',authorization)
 
@@ -377,7 +395,7 @@ function create(){
 
         $.ajax(data);
 
-        need.timeout  = 1000 * 60;
+        need.timeout  = 1000 * 30;
     }
 
     /**
@@ -386,6 +404,8 @@ function create(){
      */
     function android_go(params){
         var error = function(jqXHR, exception){
+            Lampa.Listener.send('request_error', {params, error: jqXHR})
+
             console.log('Request','error of '+params.url+' :', errorDecode(jqXHR, exception));
 
             if(params.before_error) params.before_error(jqXHR, exception);
@@ -406,6 +426,8 @@ function create(){
         if(params.start) params.start();
 
         var secuses = function(data){
+            Lampa.Listener.send('request_secuses', {params, data});
+
             if(params.before_complite) params.before_complite(data);
 
             if(params.complite){
@@ -424,11 +446,11 @@ function create(){
             if(params.end) params.end();
         }
 
-        params.timeout = need.timeout;
+        params.timeout = !Mirrors.connected() && params.url.indexOf(Manifest.cub_domain) >= 0 ? 3000 : params.timeout || need.timeout;
 
         Android.httpReq(params, {complite: secuses, error: error})
 
-        need.timeout  = 1000 * 60;
+        need.timeout  = 1000 * 30;
     }
 
     function native(params){

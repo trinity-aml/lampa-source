@@ -1159,4 +1159,28 @@ export default {
     settings_parental_control_where: 'Дзе запытваць PIN-код',
     title_fire: 'Агонь!',
     title_top_100: 'Топ 100',
+
+    storage_quota_exceeded: 'Перавышаны ліміт сховішча. Выдаліце кэш і паспрабуйце зноў.',
+    player_normalization_type_title: 'Тып нармалізацыі',
+    player_normalization_type_all: 'Усе',
+    player_normalization_type_up: 'Толькі павышэнне',
+    player_normalization_type_down: 'Толькі паніжэнне',
+    settings_cub_domain: 'Асноўны дамен',
+
+    title_ai_assistant: 'AI-асістэнт',
+    title_facts: 'Цікавыя факты',
+    ai_search_start_typing: 'Запытайце ў AI-асістэнта, якія фільмы вы хочаце знайсці. Напрыклад: "Фільмы пра космас"',
+    ai_search_limit: 'Ліміт запытаў перавышаны. Паспрабуйце паўтарыць запыт пазней. З падпіскай CUB Premium ліміты будуць павялічаны, і вам не давядзецца чакаць!',
+    ai_subscribe_title: 'Адкрыйце больш магчымасцяў з AI',
+    ai_subscribe_descr: 'Аформіце падпіску CUB Premium і павялічце колькасць запытаў да AI. Разам з AI мы падбяром для вас найлепшыя фільмы, якія толькі зможам.',
+
+    dmca_title: 'Кантэнт заблакаваны',
+    dmca_descr: 'Гэты матэрыял недаступны для прагляду. Ён быў заблакаваны па просьбе праваўладальніка ў адпаведнасці з заканадаўствам аб аўтарскіх правах.',
+
+    loading_progress_step_0: 'Падрыхтоўка',
+    loading_progress_step_1: 'Загрузка моў',
+    loading_progress_step_2: 'Пошук люстэркаў',
+    loading_progress_step_3: 'Падрыхтоўка пашырэнняў',
+    loading_progress_step_4: 'Засталося крыху',
+    loading_progress_step_5: 'Ужо хутка'
 }

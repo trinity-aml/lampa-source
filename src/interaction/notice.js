@@ -35,6 +35,10 @@ class Notice{
         this.classes.all   = new NoticeAll()
         this.classes.lampa = new NoticeLampa()
         this.classes.cub   = new NoticeCub()
+
+        Lampa.Listener.follow('app',e=>{
+            if(e.type == 'ready') this.drawCount()
+        })
     }
 
     open(){
@@ -148,9 +152,9 @@ class Notice{
                         img_author.src = './img/img_broken.svg'
                     }
 
-                    img_icon.src = icon
+                    img_icon.src = Utils.fixProtocolLink(icon)
 
-                    if(element.author) img_author.src = author_data.img.indexOf('http') >= 0 ? author_data.img : TMDB.image('t/p/w200/'+author_data.img)
+                    if(element.author) img_author.src = Utils.fixProtocolLink(author_data.img.indexOf('http') >= 0 ? author_data.img : TMDB.image('t/p/w200/'+author_data.img))
                 }
             })
 

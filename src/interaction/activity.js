@@ -10,6 +10,8 @@ import Screensaver from './screensaver'
 import Utils from '../utils/math'
 import Arrays from '../utils/arrays'
 import Platform from '../utils/platform'
+import App from '../utils/app'
+import Select from '../interaction/select'
 
 let listener  = Subscribe()
 let activites = []
@@ -248,10 +250,13 @@ function init(){
 
     let swip_status = 0
     let swip_timer
+    let start_time = Date.now()
 
     setTimeout(()=>{
         wait = false
     },1500)
+
+    setTimeout(last,500)
 
     window.addEventListener('popstate', () => {
         if(window.god_enabled) Lampa.Noty.show('Popstate - ['+(fullout || wait)+']')
@@ -279,7 +284,8 @@ function init(){
         }
     })
 
-    //исключительно для огрызков пришлось мутить работу свайпа назад
+    // исключительно для огрызков пришлось мутить работу свайпа назад
+
     if(Platform.is('apple')){
         let body = document.querySelector('body')
 
@@ -300,6 +306,44 @@ function init(){
             }
         })
     }
+
+    // выход из приложения
+
+    listener.follow('backward',(event)=>{
+        let noout = Platform.is('browser') || Platform.desktop()
+
+        if(event.count == 1 && Date.now() > start_time + (1000 * 2) && !noout){
+            let enabled = Controller.enabled().name
+
+            Select.show({
+                title: Lang.translate('title_out'),
+                items: [
+                    {
+                        title: Lang.translate('title_out_confirm'),
+                        out: true
+                    },
+                    {
+                        title: Lang.translate('cancel')
+                    }
+                ],
+                onSelect: (a)=>{
+                    if(a.out){
+                        out()
+
+                        Controller.toggle(enabled)
+
+                        App.close()
+                    }
+                    else{
+                        Controller.toggle(enabled)
+                    }
+                },
+                onBack: ()=>{
+                    Controller.toggle(enabled)
+                }
+            })
+        }
+    })
 }
 
 
@@ -345,13 +389,13 @@ function pushState(object, replace, mix){
     let comp = []
 
     for(let n in data){
-        if(typeof data[n] == 'string' || typeof data[n] == 'number') comp.push(n + '=' + encodeURIComponent(data[n]))
+        if(typeof data[n] == 'string' || typeof data[n] == 'number' || typeof data[n] == 'boolean') comp.push(n + '=' + encodeURIComponent(data[n]))
     }
 
     let card = object.card || object.movie
     let meth = object.method || (card ? card.name ? 'tv' : 'movie' : '')
     let sour = object.source || (card ? card.source : 'tmdb')
-    let durl = card ? '?card=' + card.id + (meth ? '&media=' + meth : '') + (sour ? '&source=' + sour : '') : '?' + comp.join('&')
+    let durl = card && card.id ? '?card=' + card.id + (meth ? '&media=' + meth : '') + (sour ? '&source=' + sour : '') : '?' + comp.join('&')
 
     if(mix) durl += '&' + mix
 

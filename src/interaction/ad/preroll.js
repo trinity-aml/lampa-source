@@ -118,10 +118,6 @@ function launch(call){
 }
 
 function show(data, call){
-    let ac = Lampa.Activity.active()
-
-    if(ac && ac.component == 'full' && ac.id == '1966') return launch(call)
-
     if(window.god_enabled) return launch(call)
 
     if(data.vast_url && typeof data.vast_url == 'string' && vast_api && !Account.hasPremium()){

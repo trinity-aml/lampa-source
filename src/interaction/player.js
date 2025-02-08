@@ -34,6 +34,7 @@ let launch_player
 let timer_ask
 let timer_save
 let wait_for_loading_url = false
+let wait_loading = false
 
 let preloader = {
     wait: false
@@ -79,7 +80,7 @@ function init(){
 
         Screensaver.resetTimer()
 
-        if(work && work.timeline && !work.timeline.waiting_for_user && e.duration){
+        if(work && work.timeline && !work.timeline.waiting_for_user && !work.timeline.stop_recording && e.duration){
             if(Storage.field('player_timecode') !== 'again' && !work.timeline.continued){
                 let exact = parseFloat(work.timeline.time + '')
                     exact = isNaN(exact) ? 0 : parseFloat(exact.toFixed(3))
@@ -87,7 +88,7 @@ function init(){
                 let prend = e.duration - 15,
                     posit = exact > 0 && exact < e.duration ? exact : Math.round(e.duration * work.timeline.percent / 100)
 
-                if(posit > 10) Video.to(posit > prend ? prend : posit)
+                if(posit > 10 && work.timeline.percent < 90) Video.to(posit > prend ? prend : posit)
 
                 work.timeline.continued = true
             }
@@ -169,6 +170,12 @@ function init(){
 
                 delete work.url_reserve
             }
+
+            if(e.fatal && work.error) work.error(work, (reserve_url)=>{
+                Video.destroy(true)
+
+                Video.url(reserve_url, true)
+            })
         }
     })
 
@@ -291,16 +298,18 @@ function init(){
         Video.togglePictureInPicture()
     })
 
-    /** Переключили качемтво видео */
+    /** Переключили качеcтво видео */
     Panel.listener.follow('quality',(e)=>{
         Video.destroy(true)
+
+        if(work) work.quality_switched = e.name
 
         Video.url(e.url, true)
 
         if(work && work.timeline){
             work.timeline.continued = false
             work.timeline.continued_bloc = false
-        } 
+        }
     })
 
     /** Нажали на кнопку (отправить) */
@@ -323,6 +332,8 @@ function init(){
             destroy()
 
             e.item.continue_play = true
+
+            Playlist.set(Playlist.get()) //надо повторно отправить, чтобы появилась кнопка плейлиста
 
             play(e.item)
 
@@ -433,12 +444,30 @@ function toggle(){
         back: backward
     })
 
+    Controller.add('player-loading',{
+        invisible: true,
+        toggle: ()=>{
+            Controller.clear()
+            
+            Panel.show()
+        },
+        back: backward
+    })
+
     Controller.toggle('player')
 }
 
 /**
  * Вызвать событие назад
  */
+
+/**
+ * Закрыть плеер
+ * @doc
+ * @name close
+ * @alias Player
+ */
+
 function backward(){
     destroy()
 
@@ -459,12 +488,15 @@ function destroy(){
     clearTimeout(timer_ask)
     clearInterval(timer_save)
 
+    if(work.timeline) work.timeline.stop_recording = false
+
     work = false
 
     preloader.wait = false
     preloader.call = null
 
     wait_for_loading_url = false
+    wait_loading = false
 
     viewing.time       = 0
     viewing.difference = 0
@@ -473,6 +505,7 @@ function destroy(){
     html.removeClass('player--ios')
     html.removeClass('iptv')
     html.removeClass('player--panel-visible')
+    html.removeClass('player--loading')
 
     TV.destroy()
 
@@ -620,14 +653,14 @@ function ask(){
  * Сохранить отметку просмотра
  */
 function saveTimeView(){
-    if(work.timeline && work.timeline.handler) work.timeline.handler(work.timeline.percent, work.timeline.time, work.timeline.duration)
+    if(work.timeline && work.timeline.handler && !work.timeline.stop_recording) work.timeline.handler(work.timeline.percent, work.timeline.time, work.timeline.duration)
 }
 
 /**
  * Сохранять отметку просмотра каждые 2 минуты
  */
 function saveTimeLoop(){
-    if(work.timeline){
+    if(work.timeline && !work.timeline.stop_recording){
         timer_save = setInterval(saveTimeView,1000*60*2)
     }
 }
@@ -743,22 +776,60 @@ function addContinueWatch(){
 }
 
 /**
- * Запустить плеер
- * @param {Object} data 
+ * Получить URL по качеству видео
+ * @doc
+ * @name getUrlQuality
+ * @alias Player
+ * @param {object} quality JSON({"480p": "http://example/video.mp4", "720p": {"url": "http://example/video.mp4", "label": "HD"}, "1080p": {"label": "FHD", "call": "{function} - вызвать при выборе"}})
+ * @param {boolean} set_better установить лучшее качество, если нет дефолтного
+ * @returns {string} URL
  */
+
+function getUrlQuality(quality, set_better = true){
+    if(typeof quality !== 'object') return ''
+
+    let url = ''
+    
+    for(let q in quality){
+        let qa = quality[q]
+        let qu = typeof qa == 'object' ? qa.url : typeof qa == 'string' ? qa : ''
+
+        if(parseInt(q) == Storage.field('video_quality_default') && qu) return qu
+    }
+    
+    if(!url && set_better){
+        let sort_quality = Arrays.getKeys(quality)
+
+        sort_quality.sort(function(a, b) {
+            return parseInt(b) - parseInt(a)
+        })
+
+        sort_quality.forEach(q=>{
+            let qa = quality[q]
+            let qu = typeof qa == 'object' ? qa.url : typeof qa == 'string' ? qa : ''
+
+            if(qu && !url) url = qu
+        })
+    }
+
+    return url
+}
+
+/**
+ * Запустить плеер
+ * @doc
+ * @name play
+ * @alias Player
+ * @param {object} data JSON({"url": "http://example/video.mp4", "quality": {"1080p": "http://example/video.mp4"}, "title": "Video title", "translate": [{"name": "Перевод", "language": "ru", "extra": {"channels": 2}}], "subtitles": [{"url": "http://example/subs.srt", "label": "RU Force"}], "card": "{object} - TMDB Card", "timeline": "{object} - Lampa.Timeline.view", "iptv": "{boolean} - запустить IPTV плеер", "tv": "{boolean} - имитация IPTV", "torrent_hash": "{string}", "playlist": [{"title":"{string} - Серия 1", "url":"{string} - http://example/video.mp4"}]})
+ */
+
 function play(data){
     console.log('Player','url:',data.url)
 
     if(data.quality){
         if(Arrays.getKeys(data.quality).length == 1) delete data.quality
         else{
-            for(let q in data.quality){
-                if(parseInt(q) == Storage.field('video_quality_default')){
-                    data.url = data.quality[q]
-    
-                    break
-                }
-            }
+            data.url = getUrlQuality(data.quality, false) || data.url
         }
     }
 
@@ -792,6 +863,7 @@ function play(data){
                 Video.speed(Storage.get('player_speed','default'))
 
                 if(data.subtitles) Video.customSubs(data.subtitles)
+                if(data.voiceovers) Panel.setTracks(data.voiceovers)
 
                 Info.set('name',data.title)
 
@@ -871,16 +943,24 @@ function stat(url){
 
 /**
  * Установить плейлист
- * @param {Array} playlist 
+ * @doc
+ * @name playlist
+ * @alias Player
+ * @param {array} data JSON([{"title":"{string} - Серия 1", "url":"{string} - http://example/video.mp4"}])
  */
+
 function playlist(playlist){
     if(work || preloader.wait) Playlist.set(playlist)
 }
 
 /**
- * Установить субтитры
- * @param {Array} subs 
+ * Установить субтитры для видео
+ * @doc
+ * @name subtitles
+ * @alias Player
+ * @param {array} subs JSON([{"index":"{integer}", "label":"{string}", "url":"http://example/subs.srt"}])
  */
+
 function subtitles(subs){
     if(work || preloader.wait){
         Video.customSubs(subs)
@@ -889,16 +969,24 @@ function subtitles(subs){
 
 /**
  * Запустить другой плеер
- * @param {String} need - тип плеера
+ * @doc
+ * @name runas
+ * @alias Player
+ * @param {string} need android, ios, webos, apple, apple_tv, macos, desktop, other
  */
+
 function runas(need){
     launch_player = need
 }
 
 /**
- * Обратный вызов
- * @param {Function} back 
+ * Обратный вызов при закрытии плеера
+ * @doc
+ * @name callback
+ * @alias Player
+ * @param {function} back 
  */
+
 function onBack(back){
     callback = back
 }
@@ -913,10 +1001,47 @@ function render(){
 
 /**
  * Возвращает статус, открыт ли плеер
- * @returns boolean
+ * @doc
+ * @name opened
+ * @alias Player
+ * @returns {boolean}
  */
+
 function opened(){
     return $('body').find('.player').length ? true : false
+}
+
+/**
+ * Показать процесс загрузки
+ * @doc
+ * @name loading
+ * @alias Player
+ * @param {boolean} status cтатус загрузки, `true` - показать, `false` - скрыть
+ */
+
+function loading(status){
+    if(!work) return
+
+    wait_loading = status
+
+    html.toggleClass('player--loading',Boolean(status))
+
+    if(wait_loading){
+        Controller.toggle('player-loading')
+
+        Video.pause()
+    }
+    else{
+        Video.play()
+
+        toggle()
+    }
+}
+
+function timecodeRecording(status){
+    if(work && work.timeline){
+        work.timeline.stop_recording = !status
+    }
 }
 
 export default {
@@ -932,5 +1057,8 @@ export default {
     opened,
     iptv,
     programReady: TV.programReady,
-    close: backward
+    close: backward,
+    getUrlQuality,
+    loading,
+    timecodeRecording
 }

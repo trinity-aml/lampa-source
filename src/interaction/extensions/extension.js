@@ -188,7 +188,7 @@ class Extension extends Item {
             check.classList.add('hide')
         }
 
-        let url = UtilsOther.rewriteIfHTTPS(this.data.url || this.data.link)
+        let url = UtilsOther.fixMirrorLink(UtilsOther.rewriteIfHTTPS(this.data.url || this.data.link))
 
         this.network.timeout(5000)
         this.network.native(url,(str)=>{

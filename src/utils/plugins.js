@@ -17,8 +17,8 @@ let _created = []
 let _loaded  = []
 let _network = new Request()
 let _blacklist = []
-let _delay_send = []
-let _delay_timer
+let _awaits = []
+let _noload = []
 
 /**
  * Запуск
@@ -98,7 +98,7 @@ function save(){
 }
 
 function updatePluginDB(name, url){
-    if(Account.hasPremium()){
+    //if(Account.hasPremium()){
         let cu = Utils.addUrlComponent(url, 'cache=true')
 
         _network.native(cu,(str)=>{
@@ -110,11 +110,11 @@ function updatePluginDB(name, url){
         },false,false,{
             dataType: 'text'
         })
-    }
+    //}
 }
 
 function createPluginDB(name){
-    if(Account.hasPremium()){
+    //if(Account.hasPremium()){
         Cache.getData('plugins',name).then(code=>{
             if(code){
                 let s = document.createElement('script')
@@ -135,13 +135,15 @@ function createPluginDB(name){
         }).catch(e=>{
             console.log('Plugins','include from cache fail:', name, typeof e == 'string' ? e : e.message)
         })
-    }
+    //}
 }
 
 function addPluginParams(url){
     let encode = url
 
     encode = encode.replace('cub.watch', Manifest.cub_domain)
+
+    encode = Utils.fixMirrorLink(encode)
         
     if(!/[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}/.test(encode)){
         encode = encode.replace(/\{storage_(\w+|\d+|_|-)\}/g,(match,key)=>{
@@ -163,6 +165,8 @@ function addPluginParams(url){
 }
 
 function loadBlackList(call){
+    if(window.lampa_settings.disable_features.blacklist) return call([])
+    
     let status = new Status(2)
         status.onComplite = (res)=>{
             call([].concat(res.cub, res.custom))
@@ -176,30 +180,16 @@ function loadBlackList(call){
         status.append('cub', list)
     },()=>{
         status.append('cub', Storage.get('plugins_blacklist','[]'))
+    }, false, {
+        timeout: 1000 * 5
     })
 
     _network.silent('./plugins_black_list.json',(list)=>{
         status.append('custom', list)
     },()=>{
         status.append('custom', [])
-    })
-}
-
-function analysisPlugins(url){
-    _network.native(url,(str)=>{
-        if(/function|lampa|window/ig.test(str)){
-            _delay_send.push(url)
-
-            clearTimeout(_delay_timer)
-
-            _delay_timer = setTimeout(()=>{
-                _network.silent(Utils.protocol() + Manifest.cub_domain + '/api/plugins/analysis',false,false,{
-                    list: JSON.stringify(_delay_send)
-                })
-            },10000)
-        }
-    },false,false,{
-        dataType: 'text'
+    }, false, {
+        timeout: 1000 * 5
     })
 }
 
@@ -207,12 +197,53 @@ function analysisPlugins(url){
  * Загрузка всех плагинов
  */
 function load(call){
-    console.log('Plugins','start load')
+    let errors   = []
+    let original = {}
+    let include  = []
 
+    _awaits.forEach(url=>{
+        let encode = addPluginParams(url)
+
+        include.push(encode)
+
+        original[encode] = url
+    })
+
+    Utils.putScriptAsync(include,()=>{
+        call()
+
+        if(errors.length){
+            setTimeout(()=>{
+                Noty.show(Lang.translate('plugins_no_loaded') + ' ('+errors.join(', ')+')',{time: 6000})
+            },2000)
+        }
+    },(u)=>{
+        if(u.indexOf('modification.js') == -1){
+            console.log('Plugins','error:', original[u])
+
+            errors.push(original[u])
+
+            _noload.push(original[u])
+
+            createPluginDB(original[u], u)
+        }
+    },(u)=>{
+        console.log('Plugins','include:', original[u])
+
+        console.log('Extensions','include:', original[u])
+
+        _created.push(original[u])
+
+        updatePluginDB(original[u], u)
+    },false)
+}
+
+function task(call){
     modify()
 
-    loadBlackList((black_list)=>{
+    _loaded = Storage.get('plugins','[]')
 
+    loadBlackList((black_list)=>{
         Account.plugins((plugins)=>{
             let puts = window.lampa_settings.plugins_use ? plugins.filter(plugin=>plugin.status).map(plugin=>plugin.url).concat(Storage.get('plugins','[]').filter(plugin=>plugin.status).map(plugin=>plugin.url)) : []
 
@@ -246,46 +277,15 @@ function load(call){
 
             console.log('Plugins','clear list:', puts)
 
-            let errors   = []
-            let original = {}
-            let include  = []
+            _awaits = puts
 
-            puts.forEach(url=>{
-                let encode = addPluginParams(url)
-
-                include.push(encode)
-
-                original[encode] = url
-            })
-
-            Utils.putScriptAsync(include,()=>{
-                call()
-
-                if(errors.length){
-                    setTimeout(()=>{
-                        Noty.show(Lang.translate('plugins_no_loaded') + ' ('+errors.join(', ')+')',{time: 6000})
-                    },2000)
-                }
-            },(u)=>{
-                if(u.indexOf('modification.js') == -1){
-                    console.log('Plugins','error:', original[u])
-
-                    errors.push(original[u])
-
-                    createPluginDB(original[u], u)
-                }
-            },(u)=>{
-                console.log('Plugins','include:', original[u])
-
-                _created.push(original[u])
-
-                updatePluginDB(original[u], u)
-
-                //analysisPlugins(original[u])
-            },false)
+            call()
         })
-
     })
+}
+
+function awaits(){
+    return _awaits
 }
 
 export default {
@@ -293,8 +293,11 @@ export default {
     load,
     remove,
     loaded: ()=>_created,
+    errors: ()=>_noload,
     add,
     get,
     save,
-    push
+    push,
+    task,
+    awaits
 }

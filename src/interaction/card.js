@@ -92,6 +92,10 @@ function Card(data, params = {}){
                 this.card.classList.add('card--category')
             }
 
+            if(params.card_explorer){
+                this.card.classList.add('card--explorer')
+            }
+
             if(params.card_collection){
                 this.card.classList.add('card--collection')
 
@@ -247,7 +251,7 @@ function Card(data, params = {}){
 
                     if(next.length == 0) next = [viewed.ep]
 
-                    if(soon.length) next.push(soon[0])
+                    if(soon.length && next.length < 5 && !next.find(n=>n.episode_number == soon[0].episode_number)) next.push(soon[0])
 
                     let wrap = Template.js('card_watched',{})
 

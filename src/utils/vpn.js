@@ -3,13 +3,14 @@ import Request from './reguest'
 import Storage from './storage'
 import Plugins from './plugins'
 import Arrays from './arrays'
+import Utils from './math'
 
 /**
  * Короче, постоянно пишут (почему нет картинок?)
  * Решил сделать автоматическую установку TMDB Proxy если регион RU
  */
 
-let network = new Request()
+let network  = new Request()
 
 function region(call){
     let reg = Storage.get('region','{}')
@@ -28,77 +29,63 @@ function region(call){
             call(code.toLowerCase())
         }
 
-        extract('https', extracted,()=>{
-            //может не работает https
+        extract(extracted, ()=>{
+            console.log('VPN', 'domain not responding')
 
-            Storage.set('protocol', 'http')
-
-            console.log('VPN', 'disable HTTPS')
-
-            extract('http', extracted, ()=>{
-                console.log('VPN', 'domain not responding')
-
-                Storage.set('region',{
-                    code: Storage.field('language'),
-                    time: Date.now()
-                })
-
-                call(Storage.field('language'))
+            Storage.set('region',{
+                code: Storage.field('language'),
+                time: Date.now()
             })
+
+            call(Storage.field('language'))
         })
     }
     else call(reg.code)
 }
 
-let extract = (proto, call, error)=>{
-    network.silent(proto + '://geo.' + Manifest.cub_domain,call,error,false,{
-        dataType: 'text'
+let extract = (call, error)=>{
+    network.silent(Utils.protocol() + 'geo.' + Manifest.cub_domain,call,error,false,{
+        dataType: 'text',
+        timeout: 8000
     })
 }
 
-function init(){
-    if(Storage.get('vpn_checked_ready', 'false') || Storage.get('tmdb_proxy_api', '') || Storage.get('tmdb_proxy_image', '')) return
+function task(call){
+    if(Storage.get('vpn_checked_ready', 'false') || Storage.get('tmdb_proxy_api', '') || Storage.get('tmdb_proxy_image', '') || window.lampa_settings.disable_features.install_proxy) return call()
+    
+    let awaits = Plugins.awaits()
 
     let install = (country)=>{
         console.log('VPN', 'country ' + country)
 
-        if(country.trim() == 'RU'){
+        if(country.trim().toLowerCase() == 'ru'){
             //ну это наш клиент
 
-            let ready = Plugins.get().find(a=>(a.url + '').indexOf('plugin/tmdb-proxy') >= 0)
+            let ready = awaits.find(a=>a.indexOf('plugin/tmdb-proxy') >= 0)
 
             if(!ready){
                 console.log('VPN', 'install TMDB Proxy')
 
-                Plugins.add({url: 'http://' + Manifest.cub_domain + '/plugin/tmdb-proxy', status: 1, name: 'TMDB Proxy', author: '@lampa'})
+                Plugins.add({url: 'http://' + Manifest.cub_mirrors[0] + '/plugin/tmdb-proxy', status: 1, name: 'TMDB Proxy', author: '@lampa'})
             }
         }
+
+        call()
     }
 
-    let installed = Plugins.get().find(a=>(a.url + '').indexOf('plugin/tmdb-proxy') >= 0)
+    let installed = awaits.find(a=>a.indexOf('plugin/tmdb-proxy') >= 0)
 
     if(!installed){
         console.log('VPN', 'start install TMDB Proxy')
 
-        extract('https', install,()=>{
-            //может не работает https
-
-            Storage.set('protocol', 'http')
-
-            console.log('VPN', 'disable HTTPS')
-
-            extract('http', install, ()=>{
-                console.log('VPN', 'domain not responding')
-
-                //хммм...., наверно к домену не подключается
-            })
-        })
+        extract(install, call)
     }
+    else call()
 
     Storage.set('vpn_checked_ready', true)
 }
 
 export default {
-    init,
-    region
+    region,
+    task
 }

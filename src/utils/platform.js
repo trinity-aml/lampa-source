@@ -65,6 +65,10 @@ function init(){
     }
     
     Storage.set('native',Storage.get('platform') ? true : false)
+
+    $('body').addClass('platform--'+(get() || 'noname'))
+
+    if(!screen('tv')) $('body').addClass('touch-device')
 }
 
 /**
@@ -168,7 +172,7 @@ function install(what){
         $('.about__contacts',about).append(`
             <div>
                 <small>Telegram</small><br>
-                @lampa_android
+                @lampa_group
             </div>
         `)
 

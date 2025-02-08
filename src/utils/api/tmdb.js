@@ -431,7 +431,7 @@ function full(params = {}, oncomplite, onerror){
         status.append('reactions', json)
     })
 
-    if(Lang.selected(['ru','uk','be'])){
+    if(Lang.selected(['ru','uk','be']) && window.lampa_settings.account_use){
         status.need++
 
         Api.sources.cub.discussGet(params, (json)=>{
@@ -472,6 +472,7 @@ function list(params = {}, oncomplite, onerror){
 function get(method, params = {}, oncomplite, onerror){
     let u = url(method, params)
     
+    network.timeout(1000 * 10)
     network.silent(u,(json)=>{
         json.url = method
 

@@ -16,7 +16,6 @@ import settings_player from '../templates/settings/player'
 import settings_more from '../templates/settings/more'
 import settings_tmdb from '../templates/settings/tmdb'
 import settings_plugins from '../templates/settings/plugins'
-import settings_cloud from '../templates/settings/cloud'
 import settings_account from '../templates/settings/account'
 import items_line from '../templates/items/line'
 import card from '../templates/card'
@@ -72,6 +71,8 @@ import icon_star from '../templates/icons/star'
 import icon_viewed from '../templates/icons/viewed'
 import icon_lock from '../templates/icons/lock'
 import icon_like from '../templates/icons/like'
+import icon_text from '../templates/icons/text'
+import icon_card from '../templates/icons/card'
 import timeline from '../templates/timeline'
 import timeline_details from '../templates/timeline_details'
 import list_empty from '../templates/list_empty'
@@ -106,6 +107,8 @@ import ad_bot from '../templates/ad/bot'
 import ad_video_block from '../templates/ad/video'
 import discuss_rules from '../templates/discuss_rules'
 import bookmarks_folder from '../templates/bookmarks_folder'
+import ai_search_animation from '../templates/ai/search_animation'
+
 
 
 let templates = {
@@ -124,7 +127,6 @@ let templates = {
     settings_more,
     settings_tmdb,
     settings_plugins,
-    settings_cloud,
     settings_account,
     scroll,
     items_line,
@@ -177,6 +179,8 @@ let templates = {
     icon_viewed,
     icon_lock,
     icon_like,
+    icon_text,
+    icon_card,
     timeline,
     timeline_details,
     list_empty,
@@ -214,7 +218,8 @@ let templates = {
     ad_bot,
     ad_video_block,
     discuss_rules,
-    bookmarks_folder
+    bookmarks_folder,
+    ai_search_animation
 }
 
 let created = {}

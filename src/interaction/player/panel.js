@@ -12,6 +12,7 @@ import DeviceInput from '../../utils/device_input'
 import Video from './video'
 import TV from './iptv'
 import Footer from './footer'
+import Playlist from './playlist'
 
 let html
 let listener = Subscribe()
@@ -49,6 +50,7 @@ function init(){
         quality: $('.player-panel__quality',html),
         episode: $('.player-panel__next-episode-name',html),
         rewind_touch: $('.player-panel__time-touch-zone',html),
+        playlist: html.find('.player-panel__playlist'),
 
         iptv_channel: $('.player-panel-iptv__channel',html),
         iptv_arrow_up: $('.player-panel-iptv__arrow-up',html),
@@ -115,6 +117,10 @@ function init(){
         }
     })
 
+    Playlist.listener.follow('set',(e)=>{
+        elems.playlist.toggleClass('hide', Boolean(e.playlist.length == 0))
+    })
+
 
     html.find('.selector').on('hover:focus',(e)=>{
         last = e.target
@@ -140,7 +146,7 @@ function init(){
         listener.send('rnext',{})
     })
 
-    html.find('.player-panel__playlist').on('hover:enter',(e)=>{
+    elems.playlist.on('hover:enter',(e)=>{
         listener.send('playlist',{})
     })
 
@@ -242,35 +248,57 @@ function init(){
             }
             else{
                 for(let i in qualitys){
+                    let qa = qualitys[i]
+                    let qu = typeof qa == 'object' ? qa.url : typeof qa == 'string' ? qa : ''
+                    let lb = typeof qa == 'object' ? qa.label : ''
+
                     qs.push({
-                        title: i,
-                        url: qualitys[i],
-                        selected: nw == i
+                        quality: i,
+                        title: i + (lb ? '<sub>' + lb + '</sub>' : ''),
+                        url: qu,
+                        selected: nw == i,
+                        call: typeof qa == 'object' ? qa.call : false,
+                        instance: qa
                     })
                 }
             }
 
             if(!qs.length) return
 
-            let enabled = Controller.enabled()
+            let enabled = Controller.enabled().name
 
             Select.show({
                 title: Lang.translate('player_quality'),
                 items: qs,
                 onSelect: (a)=>{
-                    elems.quality.text(a.title)
+                    if(a.call){
+                        Controller.toggle(enabled)
 
-                    qs.forEach(q=>q.selected = false)
+                        a.call(a.instance, (url)=>{
+                            elems.quality.text(a.quality)
 
-                    a.enabled = true
-                    a.selected = true
+                            qs.forEach(q=>q.selected = false)
 
-                    if(!Arrays.isArray(qualitys) || a.change_quality) listener.send('quality',{name: a.title, url: a.url})
+                            a.selected = true
 
-                    Controller.toggle(enabled.name)
+                            listener.send('quality',{name: a.quality, url: url})
+                        })
+                    }
+                    else{
+                        elems.quality.text(a.quality)
+
+                        qs.forEach(q=>q.selected = false)
+
+                        a.enabled = true
+                        a.selected = true
+
+                        if(!Arrays.isArray(qualitys) || a.change_quality) listener.send('quality',{name: a.quality, url: a.url})
+
+                        Controller.toggle(enabled)
+                    }
                 },
                 onBack: ()=>{
-                    Controller.toggle(enabled.name)
+                    Controller.toggle(enabled)
                 }
             })
         }
@@ -299,7 +327,7 @@ function init(){
                 element.title = name.join(' / ')
             })
 
-            let enabled = Controller.enabled()
+            let enabled = Controller.enabled().name
 
             Select.show({
                 title: Lang.translate('player_tracks'),
@@ -312,11 +340,13 @@ function init(){
 
                     a.enabled  = true
                     a.selected = true
-        
-                    Controller.toggle(enabled.name)
+
+                    Controller.toggle(enabled)
+
+                    if(a.onSelect) a.onSelect(a)
                 },
                 onBack: ()=>{
-                    Controller.toggle(enabled.name)
+                    Controller.toggle(enabled)
                 }
             })
         }
@@ -347,7 +377,7 @@ function init(){
                 } 
             })
 
-            let enabled = Controller.enabled()
+            let enabled = Controller.enabled().name
 
             Select.show({
                 title: Lang.translate('player_subs'),
@@ -363,10 +393,12 @@ function init(){
 
                     listener.send('subsview',{status: a.index > -1})
         
-                    Controller.toggle(enabled.name)
+                    Controller.toggle(enabled)
+
+                    if(a.onSelect) a.onSelect(a)
                 },
                 onBack: ()=>{
-                    Controller.toggle(enabled.name)
+                    Controller.toggle(enabled)
                 }
             })
         }
@@ -567,6 +599,12 @@ function settings(){
             subtitle: Lang.translate('player_normalization_step_' + Storage.get('player_normalization_smooth','medium')),
             method: 'normalization_smooth'
         })
+
+        items.push({
+            title: Lang.translate('player_normalization_type_title'),
+            subtitle: Lang.translate('player_normalization_type_' + Storage.get('player_normalization_type','all')),
+            method: 'normalization_type'
+        })
     }
 
     if(last_settings_action){
@@ -584,6 +622,7 @@ function settings(){
             if(a.method == 'speed') selectSpeed()
             if(a.method == 'normalization_power') selectNormalizationStep('power','hight')
             if(a.method == 'normalization_smooth') selectNormalizationStep('smooth','medium')
+            if(a.method == 'normalization_type') selectNormalizationType()
             if(a.method == 'share'){
                 Controller.toggle(Platform.screen('mobile') ? 'player' : 'player_panel')
 
@@ -592,6 +631,40 @@ function settings(){
         },
         onBack: ()=>{
             Controller.toggle(Platform.screen('mobile') ? 'player' : 'player_panel')
+        }
+    })
+}
+
+function selectNormalizationType(){
+    let select  = Storage.get('player_normalization_type', 'all')
+
+    let items = [
+        {
+            title: Lang.translate('player_normalization_type_all'),
+            value: 'all',
+            selected: select == 'all'
+        },
+        {
+            title: Lang.translate('player_normalization_type_up'),
+            value: 'up',
+            selected: select == 'up'
+        },
+        {
+            title: Lang.translate('player_normalization_type_down'),
+            value: 'down',
+            selected: select == 'down'
+        }
+    ]
+
+    Select.show({
+        title: Lang.translate('player_normalization_type_title'),
+        items: items,
+        nohide: true,
+        onBack: settings,
+        onSelect: (a)=>{
+            Storage.set('player_normalization_type', a.value)
+
+            settings()
         }
     })
 }
@@ -1071,7 +1144,7 @@ function setTracks(tr){
 }
 
 /**
- * Установить качество
+ * Устанавливает качество из M3U8
  * @param {[{title:string, url:string}]} levels 
  * @param {string} current 
  */
@@ -1084,9 +1157,9 @@ function setLevels(levels, current){
 }
 
 /**
- * Показать текущие качество
- * @param {[{title:string, url:string}]} qs 
- * @param {string} url 
+ * Показать текущие качество и записать в переменную для показа в панели
+ * @param {{"1080p":"url", "720p":"url"}} qs список качеств
+ * @param {string} url текущее качество url
  */
 function quality(qs, url){
     if(qs){
@@ -1095,7 +1168,10 @@ function quality(qs, url){
         qualitys = qs
 
         for(let i in qs){
-            if(qs[i] == url){
+            let qa = qs[i]
+            let qu = typeof qa == 'object' ? qa.url : typeof qa == 'string' ? qa : ''
+
+            if(qu == url){
                 elems.quality.text(i)
                 break
             }
@@ -1154,6 +1230,7 @@ function destroy(){
     elems.subs.toggleClass('hide',true)
     elems.tracks.toggleClass('hide',true)
     elems.episode.toggleClass('hide',true)
+    elems.playlist.toggleClass('hide',true)
 
     html.toggleClass('panel--paused',false)
     html.toggleClass('panel--norewind',false)

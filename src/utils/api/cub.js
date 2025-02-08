@@ -14,7 +14,7 @@ import TimeTable from '../../utils/timetable'
 import Episode from '../../interaction/episode'
 import Manifest from '../manifest'
 
-let baseurl   = Utils.protocol() + 'tmdb.'+Manifest.cub_domain+'/'
+
 let network   = new Reguest()
 
 
@@ -31,7 +31,7 @@ function url(u, params = {}){
 
     let email = Storage.get('account','{}').email || ''
 
-    return Utils.addUrlComponent(baseurl + u, 'email=' + encodeURIComponent(email))
+    return Utils.addUrlComponent(Utils.protocol() + 'tmdb.'+Manifest.cub_domain+'/' + u, 'email=' + encodeURIComponent(email))
 }
 
 function add(u, params){
@@ -447,7 +447,7 @@ function full(params, oncomplite, onerror){
         status.append('reactions', json)
     })
 
-    if(Lang.selected(['ru','uk','be'])){
+    if(Lang.selected(['ru','uk','be']) && window.lampa_settings.account_use){
         status.need++
 
         discussGet(params, (json)=>{
@@ -475,13 +475,17 @@ function trailers(type, oncomplite){
 }
 
 function reactionsGet(params, oncomplite){
+    if(window.lampa_settings.disable_features.reactions) return oncomplite({result: []})
+    
     network.silent(Utils.protocol() + Manifest.cub_domain + '/api/reactions/get/' + params.method + '_' + params.id, oncomplite,()=>{
         oncomplite({result: []})
-    })
+    }, false, {timeout: 1000 * 5})
 }
 
 function discussGet(params, oncomplite, onerror){
-    network.silent(Utils.protocol() + Manifest.cub_domain + '/api/discuss/get/'+params.method+'_'+params.id+'/' + (params.page || 1) + '/' + Storage.field('language'), oncomplite, onerror)
+    if(window.lampa_settings.disable_features.discuss) return onerror()
+    
+    network.silent(Utils.protocol() + Manifest.cub_domain + '/api/discuss/get/'+params.method+'_'+params.id+'/' + (params.page || 1) + '/' + Storage.field('language'), oncomplite, onerror, false, {timeout: 1000 * 5})
 }
 
 function reactionsAdd(params, oncomplite, onerror){

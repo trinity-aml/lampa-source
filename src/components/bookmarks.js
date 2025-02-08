@@ -16,6 +16,7 @@ function component(object){
     let all      = Favorites.all()
     let comp     = new Lampa.InteractionMain(object)
     let viev_all = false
+    let timer
 
     comp.create = function(){
         this.activity.loader(true)
@@ -27,81 +28,115 @@ function component(object){
             let voice    = []
             let folders  = ['book','like','wath', 'viewed','scheduled','thrown']
             let media    = ['movies','tv']
-            
-            category.forEach(a=>{
-                if(all[a].length){
-                    let items = Arrays.clone(all[a].slice(0,20))
 
-                    if(folders.indexOf(a) > -1){
-                        let i = 0
+            function draw(){
+                category.forEach(a=>{
+                    if(all[a].length){
+                        let items = Arrays.clone(all[a].slice(0,20))
 
-                        media.forEach(m=>{
-                            let filter = Utils.filterCardsByType(all[a], m)
+                        if(folders.indexOf(a) > -1){
+                            let i = 0
 
-                            if(filter.length){
-                                Arrays.insert(items, i, {
-                                    cardClass: ()=>{
-                                        return new BookmarksFolder(filter,{
-                                            category: a,
-                                            media: m
-                                        })
-                                    }
-                                })
+                            media.forEach(m=>{
+                                let filter = Utils.filterCardsByType(all[a], m)
 
-                                i++
-                            }
+                                if(filter.length){
+                                    Arrays.insert(items, i, {
+                                        cardClass: ()=>{
+                                            return new BookmarksFolder(filter,{
+                                                category: a,
+                                                media: m
+                                            })
+                                        }
+                                    })
+
+                                    i++
+                                }
+                            })
+
+                            items = items.slice(0,20)
+                        }
+
+                        items.forEach(a=>a.ready = false)
+
+                        lines.push({
+                            title: Lang.translate('title_' + a),
+                            results: items,
+                            type: a
                         })
 
-                        items = items.slice(0,20)
-                    }
+                        all[a].forEach(card=>{
+                            let noti = invoice.find(a=>a.card_id == card.id)
 
-                    items.forEach(a=>a.ready = false)
+                            if(noti){
+                                // сам не помню, баг будет если не клонировать
+                                let card_clone = Arrays.clone(card)
+                                    card_clone.ready = false
 
-                    lines.push({
-                        title: Lang.translate('title_' + a),
-                        results: items,
-                        type: a
-                    })
+                                let hash = Utils.hash([noti.season, noti.season > 10 ? ':' : '', noti.episode ,card_clone.original_title].join(''))
+                                let view = Timeline.view(hash)
 
-                    all[a].forEach(card=>{
-                        let noti = invoice.find(a=>a.card_id == card.id)
-
-                        if(noti){
-                            // сам не помню, баг будет если не клонировать
-                            let card_clone = Arrays.clone(card)
-                                card_clone.ready = false
-
-                            let hash = Utils.hash([noti.season, noti.season > 10 ? ':' : '', noti.episode ,card_clone.original_title].join(''))
-                            let view = Timeline.view(hash)
-
-                            if(!view.percent && !voice.find(a=>a.id == card_clone.id)){
-                                voice.push(card_clone)
+                                if(!view.percent && !voice.find(a=>a.id == card_clone.id)){
+                                    voice.push(card_clone)
+                                }
                             }
-                        }
+                        })
+                    }
+                })
+
+                if(voice.length){
+                    Storage.set('player_continue_watch', Arrays.clone(voice.slice(0,20)))
+
+                    Arrays.insert(lines, 0, {
+                        title: Lang.translate('card_new_episode'),
+                        results: voice.slice(0,20)
                     })
                 }
-            })
 
-            if(voice.length){
-                Storage.set('player_continue_watch', Arrays.clone(voice.slice(0,20)))
+                if(lines.length){
+                    Arrays.insert(lines, 0, {
+                        title: '',
+                        results: []
+                    })
 
-                Arrays.insert(lines, 0, {
-                    title: Lang.translate('card_new_episode'),
-                    results: voice.slice(0,20)
-                })
+                    comp.build(lines)
+
+                    setTimeout(()=>{
+                        Layer.visible(comp.render(true))
+                    },100)
+                }
+                else comp.empty()
             }
 
-            if(lines.length){
-                Arrays.insert(lines, 0, {
-                    title: '',
-                    results: []
-                })
+            draw()
 
-                comp.build(lines)
+            // if(Account.working()){
+            //     let tic = 0
 
-                Layer.visible(comp.render(true))
-            }
-            else comp.empty()
+            //     timer = setInterval(()=>{
+            //         let any = Account.all()
+
+            //         if(any.length){
+            //             all = Favorites.all()
+
+            //             clearInterval(timer)
+
+            //             draw()
+            //         }
+            //         else if(tic > 10){
+            //             clearInterval(timer)
+
+            //             comp.empty()
+            //         }
+
+            //         tic++
+            //     },1000)
+            // }
+            // else{
+            //     all = Favorites.all()
+
+            //     draw()
+            // }
         })
 
         return this.render()
@@ -165,6 +200,10 @@ function component(object){
 
             viev_all = false
         },50)
+    }
+
+    comp.onDestroy = function(){
+        clearInterval(timer)
     }
 
     return comp
