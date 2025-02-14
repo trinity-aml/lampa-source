@@ -25,9 +25,10 @@ let timeout
 
 function connect(){
     let ws = Platform.is('orsay') || Platform.is('netcast') ? 'ws://' : 'wss://'
+    let pt = Platform.is('orsay') || Platform.is('netcast') ? ':8080' : ':8443'
 
     Arrays.extend(window.lampa_settings,{
-        socket_url: ws + Manifest.cub_domain+':8010'
+        socket_url: ws + Manifest.cub_domain + pt
     })
 
     if(!window.lampa_settings.socket_use || !window.lampa_settings.socket_url) return
@@ -52,7 +53,7 @@ function connect(){
     if(!socket) return
 
     socket.addEventListener('open', (event)=> {
-        console.log('Socket','open')
+        console.log('Socket','open on ' + window.lampa_settings.socket_url)
 
         timeping = 5000
 
@@ -72,7 +73,7 @@ function connect(){
 
         timeping = Math.min(1000 * 60 * 5,timeping)
 
-        console.log('Socket','try connect after', Math.round(timeping) / 1000, 'sec.')
+        console.log('Socket','try connect to '+window.lampa_settings.socket_url+' after', Math.round(timeping) / 1000, 'sec.')
 
         setTimeout(connect,Math.round(timeping))
 
@@ -111,6 +112,9 @@ function connect(){
             }
             else if(result.method == 'logoff'){
                 Account.logoff(result.data)
+            }
+            else if(result.method == 'info'){
+                console.log('Socket','info',result.data)
             }
             else if(result.method == 'other' && result.data.submethod == 'play'){
                 Controller.toContent()
