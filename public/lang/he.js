@@ -43,7 +43,7 @@ export default {
     full_directing: 'נתוב',
     full_writing: 'כתיבה',
     settings_cub_sync: 'סנכרון',
-    settings_cub_sync_descr: 'www.cub.red : סנכרון עם שירות CUB: סנכרון של הסימניות שלך, היסטוריית הגלישה, תגיות וקודי זמן. אתר אינטרנט',
+    settings_cub_sync_descr: 'סנכרון עם שירות CUB: סנכרון של הסימניות שלך, היסטוריית גלישה, תגים וקודי זמן.',
     settings_cub_account: 'חשבון',
     settings_cub_logged_in_as: 'מחובר בתור',
     settings_cub_profile: 'פרופיל',
@@ -666,6 +666,7 @@ export default {
     settings_removed: 'הוסר',
     settings_param_player_inner: 'IL',
     settings_param_player_outside: 'חיצוני',
+    settings_param_player_inner_tvos: 'פנימי',
     settings_param_yes: 'כן',
     settings_param_no: 'לא',
     settings_param_interface_size_small: 'קטן',
@@ -718,6 +719,7 @@ export default {
     fav_time_cleared: 'לוח זמנים פנוי',
     timetable_empty: 'סעיף זה יציג את תאריכי השחרור של פרקים חדשים.',
     player_quality: 'איכות',
+    player_flow: 'זְרִימָה',
     player_tracks: 'רצועות שמע',
     player_disabled: 'לא פעיל',
     player_unknown: 'לא ידוע',
@@ -1065,5 +1067,13 @@ export default {
     loading_progress_step_2: 'חיפוש מראות',
     loading_progress_step_3: 'הכנת הרחבות',
     loading_progress_step_4: 'כמעט סיימנו',
-    loading_progress_step_5: 'ממש בקרוב'
+    loading_progress_step_5: 'ממש בקרוב',
+
+    install_extension_rule_1: 'התקנת תוסף צד שלישי',
+    install_extension_rule_2: 'תוספים נוצרים על ידי מפתחים עצמאיים, ו-LAMPA אינה בודקת את תוכנם. על ידי התקנתם, אתה מסכים כי:',
+    install_extension_rule_3: '- חלק מהתוספים עשויים לבקש גישה לנתונים שלך או לעבוד עם מקורות לא מאומתים.',
+    install_extension_rule_4: '- אם התוסף שהתקנת מפר זכויות יוצרים או חוקים אחרים, האחריות המלאה על השימוש בו חלה עליך.',
+    install_extension_rule_5: '- התקן תוספים רק ממקורות מהימנים. אם יש לך ספקות לגבי אבטחתו או חוקיותו של תוסף, עדיף להימנע מהתקנתו.',
+    install_extension_rule_6: 'LAMPA אינה תומכת ואינה מאשרת תוספים הקשורים לתוכן פיראטי.',
+    install_extension_rule_7: 'בהמשך, אתה מאשר שאתה מבין את הסיכונים הללו.'
 }

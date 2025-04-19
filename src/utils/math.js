@@ -3,6 +3,39 @@ import Api from '../interaction/api'
 import Lang from './lang'
 import Manifest from './manifest'
 
+let card_fields = [
+    'poster_path',
+    'overview',
+    'release_date',
+    'genre_ids',
+    'id',
+    'original_title',
+    'original_language',
+    'title',
+    'backdrop_path',
+    'popularity',
+    'vote_count',
+    'vote_average',
+    'imdb_id',
+    'kinopoisk_id',
+    'original_name',
+    'name',
+    'first_air_date',
+    'origin_country',
+    'status',
+    'pg',
+    'release_quality',
+    'imdb_rating',
+    'kp_rating',
+    'source',
+    'number_of_seasons',
+    'number_of_episodes',
+    'next_episode_to_air',
+    'img',
+    'poster',
+    'background_image'
+]
+
 /**
  * Преобразование секунд в формат времени
  * @doc
@@ -751,6 +784,61 @@ function callWaiting(needCall, emergencyCall, time = 10000){
     })
 }
 
+function clearCard(card){
+    let new_card = {}
+    let empty = ['original_name', 'name', 'first_air_date']
+    let num   = ['popularity', 'vote_count', 'vote_average', 'imdb_rating', 'kp_rating', 'number_of_episodes', 'number_of_seasons']
+
+    card_fields.forEach(f=>{
+        if(typeof card[f] !== 'undefined'){
+            let val = card[f]
+
+            if(val == null || val == 'NaN') val = ''
+
+            if(num.indexOf(f) >= 0 && !val) val = 0
+
+            new_card[f] = val
+
+            if(empty.indexOf(f) >= 0 && !val) delete new_card[f]
+            
+        }
+    })
+
+    if(new_card.poster_path) new_card.img = Lampa.Api.img(new_card.poster_path,'w300')
+
+    return new_card
+}
+
+function qualityToText(quality){
+    let text = ''
+
+    switch(quality){
+        case '2160p':
+            text = '4K'
+            break
+        case '1440p':
+            text = '2K'
+            break
+        case '1080p':
+            text = 'FHD'
+            break
+        case '720p':
+            text = 'HD'
+            break
+        case '480p':
+            text = 'SD'
+            break
+        case '360p':
+            text = 'SD'
+            break
+        default:
+            text = quality
+            break
+    }
+
+    return text
+}
+
 export default {
     secondsToTime,
     secondsToTimeHuman,
@@ -799,5 +887,7 @@ export default {
     simpleMarkdownParser,
     fixProtocolLink,
     fixMirrorLink,
-    callWaiting
+    callWaiting,
+    clearCard,
+    qualityToText
 }

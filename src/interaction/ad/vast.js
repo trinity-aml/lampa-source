@@ -6,6 +6,7 @@ import Lang from '../../utils/lang'
 import Manifest from '../../utils/manifest'
 import Utils from '../../utils/math'
 import Platform from '../../utils/platform'
+import Storage from '../../utils/storage'
 
 let loaded_data = {
     ad: [],
@@ -19,17 +20,6 @@ function stat(method, name){
     })
 }
 
-function log(name, msg){
-    $.ajax({
-        dataType: 'text',
-        method: 'post',
-        url: Utils.protocol() + Manifest.cub_domain + '/api/payment/event_prime',
-        data: {
-            name,
-            msg
-        }
-    })
-}
 
 class Vast{
     constructor(num, vast_url, vast_msg){
@@ -40,7 +30,7 @@ class Vast{
         this.vast_url = vast_url
         this.vast_msg = vast_msg
 
-        if(loaded_data.time < Date.now() + 1000*60*60*1) this.load()
+        if(Date.now() - loaded_data.time > 1000*60*60) this.load()
         else if(loaded_data.ad.length) setTimeout(this.start.bind(this), 100)
         else this.load()
     }
@@ -108,9 +98,14 @@ class Vast{
 
         let skip        = this.block.find('.ad-video-block__skip')
         let progressbar = this.block.find('.ad-video-block__progress-fill')
+        let loader      = this.block.find('.ad-video-block__loader')
+        let container   = this.block.find('.ad-video-block__vast')
         let player
         let timer
+        let timer_end
+        let last_progress = Date.now()
         let playning = true
+        let create_time = Date.now()
 
         let adInterval
         let adReadySkip
@@ -121,6 +116,7 @@ class Vast{
             this.block.remove()
 
             clearTimeout(timer)
+            clearInterval(timer_end)
 
             console.log('Ad','error', code, msg)
 
@@ -133,7 +129,9 @@ class Vast{
         }
 
         function initialize(){
-            player = new VASTPlayer(this.block.find('.ad-video-block__vast'))
+            container.style.opacity = 0
+
+            player = new VASTPlayer(container)
 
             player.once('AdStopped', ()=> {
                 stat('complete', block.name)
@@ -141,6 +139,7 @@ class Vast{
                 console.log('Ad', 'complete')
 
                 clearTimeout(timer)
+                clearInterval(timer_end)
                 clearInterval(adInterval)
 
                 this.destroy()
@@ -172,9 +171,24 @@ class Vast{
                 } 
             })
 
-            player.once('AdStarted', onAdStarted)
+            player.once('AdStarted', onAdStarted.bind(this))
 
-            player.load(block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random())).replace('{TIME}',Date.now())).then(()=> {
+            let uid = Storage.get('vast_device_uid', '')
+
+            if(!uid){
+                uid = Utils.uid(15)
+
+                Storage.set('vast_device_uid', uid)
+            }
+
+            let u = block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random()))
+                u = u.replace('{TIME}',Date.now())
+                u = u.replace('{WIDTH}', window.innerWidth)
+                u = u.replace('{HEIGHT}', window.innerHeight)
+                u = u.replace('{PLATFORM}', Platform.get())
+                u = u.replace('{UID}', uid)
+
+            player.load(u).then(()=> {
                 return player.startAd()
             }).catch((reason)=> {
                 error((reason.message || '').indexOf('nobanner') >= 0 ? 500 : 100, reason.message)
@@ -184,14 +198,17 @@ class Vast{
         function onAdStarted() {
             console.log('Ad','event','STARTED')
 
+            container.style.opacity = 1
+
             if(!adStarted) stat('started', block.name)
 
             adStarted = true
 
             clearTimeout(timer)
+            clearInterval(timer_end)
 
             try{
-                this.block.find('.ad-video-block__loader').remove()
+                loader.remove()
             }
             catch(e){}
 
@@ -201,7 +218,11 @@ class Vast{
                 clearInterval(adInterval)
 
                 adInterval = setInterval(updateAdProgress, 100)
-            } 
+            }
+
+            timer_end = setInterval(()=>{
+                if(Date.now() - last_progress > 1000 * 10 && playning) stop.bind(this)()
+            }, 1000)
         }
 
         function updateAdProgress() {
@@ -209,9 +230,11 @@ class Vast{
 
             let progress = Math.min(100, (1 - remainingTime / adDuration) * 100)
 
+            last_progress = Date.now()
+
             progressbar.style.width = progress + '%'
 
-            adReadySkip = progress > (block.progress || 60)
+            adReadySkip = adDuration > 60 ? (adDuration - remainingTime > 45) :  progress > (block.progress || 60)
 
             skip.find('span').text(Lang.translate(adReadySkip ? 'ad_skip' : Math.round(remainingTime)))
 
@@ -221,20 +244,23 @@ class Vast{
         }
 
         function enter(){
-            if (adReadySkip) {
-                clearTimeout(timer)
-                clearInterval(adInterval)
-
-                player.stopAd().then(()=>{
-                    this.destroy()
-                }).catch(()=>{
-                    error(200, 'Cant stop ads')
-                })
-            }
+            if (adReadySkip) stop.bind(this)()
             else{
                 if(playning) player.pauseAd()
                 else player.resumeAd()
             }
+        }
+
+        function stop(){
+            clearTimeout(timer)
+            clearInterval(timer_end)
+            clearInterval(adInterval)
+
+            player.stopAd().then(()=>{
+                this.destroy()
+            }).catch(()=>{
+                error(200, 'Cant stop ads')
+            })
         }
 
         this.block.on('click',enter.bind(this))
@@ -246,7 +272,9 @@ class Vast{
                 Controller.clear()
             },
             enter: enter.bind(this),
-            back: ()=>{}
+            back: ()=>{
+                if(window.god_enabled && Date.now() - create_time > 1000*7) stop.bind(this)()
+            }
         })
 
         Controller.toggle('ad_video_block')

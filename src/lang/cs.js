@@ -52,7 +52,7 @@ export default {
     full_creator: "Tvůrce",
 
     settings_cub_sync: "Synchronizace",
-    settings_cub_sync_descr: "Synchronizace se službou CUB: synchronizace vašich záložek, historie sledování, značek a časových kódů. Web: www.cub.red",
+    settings_cub_sync_descr: "Synchronizace se službou CUB: synchronizace vašich záložek, historie sledování, značek a časových kódů.",
     settings_cub_account: "Účet",
     settings_cub_logged_in_as: "Přihlášen jako",
     settings_cub_profile: "Profil",
@@ -807,6 +807,7 @@ export default {
 
     settings_param_player_inner: "Vestavěný",
     settings_param_player_outside: "Externí",
+    settings_param_player_inner_tvos: 'Vnitřní',
     settings_param_yes: "Ano",
     settings_param_no: "Ne",
     settings_param_interface_size_small: "Menší",
@@ -856,7 +857,7 @@ export default {
     helper_torrents_view: "Pro resetování časového kódu a vyvolání menu podržte tlačítko (OK)",
 
     fav_sync_title: "Synchronizace záložek",
-    fav_sync_text: "Vaše oblíbené záložky s vámi. Připojte synchronizaci a sledujte na jakémkoli zařízení. <br><br>Pro to se zaregistrujte na webu www.cub.red, vytvořte profil a přihlaste se do aplikace.",
+    fav_sync_text: "Vaše oblíbené záložky s vámi. Připojte synchronizaci a sledujte na jakémkoli zařízení. <br><br>Pro to se zaregistrujte na webu {site}, vytvořte profil a přihlaste se do aplikace.",
     fav_sync_site: "Web",
     fav_remove_title: "Odstranit z historie",
     fav_remove_descr: "Odstranit vybranou kartu",
@@ -872,6 +873,7 @@ export default {
     timetable_empty: "V této sekci budou zobrazeny data vydání nových epizod",
 
     player_quality: "Kvalita",
+    player_flow: 'Tok',
     player_tracks: "Zvukové stopy",
     player_disabled: "Zakázáno",
     player_unknown: "Neznámé",
@@ -935,7 +937,7 @@ export default {
     notice_new_quality: "Dostupná nová kvalita",
     notice_quality: "Kvalita",
     notice_new_episode: "Nová epizoda",
-    notice_none: "Ještě nemáte žádná upozornění, zaregistrujte se na webu <b>www.cub.red</b>, abyste sledovali nové epizody a vydání.",
+    notice_none: "Ještě nemáte žádná upozornění, zaregistrujte se na webu <b>{site}</b>, abyste sledovali nové epizody a vydání.",
     notice_in_quality: "V kvalitě",
     notice_none_account: "Ještě nemáte žádná upozornění, přidejte seriály do záložek a očekávejte upozornění o nových epizodách.",
     notice_none_system: "Momentálně nemáte žádná upozornění. Určitě vás upozorníme, když se objeví nová upozornění.",
@@ -964,10 +966,10 @@ export default {
     account_import_fail: "Chyba při importu",
     account_imported: "importováno",
     account_reload_after: "restart za 5 sek.",
-    account_create: 'Otevřete více možností s účtem CUB. Zaregistrujte se na webu <span class="account-modal__site">www.cub.red</span> a získejte přístup k synchronizaci vašich záložek, časových kódů a dalších možností účtu CUB.',
+    account_create: 'Otevřete více možností s účtem CUB. Zaregistrujte se na webu <span class="account-modal__site">{site}</span> a získejte přístup k synchronizaci vašich záložek, časových kódů a dalších možností účtu CUB.',
     account_premium: "Otevřete nové obzory s účtem CUB Premium! Užijte si zvýšené limity a obohacenou funkčnost služby. Další možnosti na vás čekají již dnes",
     account_premium_more: "Více o CUB Premium",
-    account_limited: 'Dosáhli jste maximálního limitu. Zvýšte limit s účtem CUB Premium. Více na webu <span class="account-modal__site">www.cub.red/premium</span>',
+    account_limited: 'Dosáhli jste maximálního limitu. Zvýšte limit s účtem CUB Premium. Více na webu <span class="account-modal__site">{site}/premium</span>',
     account_premium_include_1: "Zvýšení počtu záložek",
     account_premium_include_2: "Zvýšení historie sledování",
     account_premium_include_3: "Zvýšení počtu časových kódů",
@@ -983,7 +985,7 @@ export default {
     account_code_enter: "Zadejte šestimístný kód",
     account_code_error: "Možná jste zadali nesprávný nebo zastaralý kód",
     account_code_wrong: "Možná jste zadali nesprávný formát",
-    account_code_where: 'řejděte na web <span class="account-add-device__site">cub.red/add</span> a zadejte tam uvedený kód.',
+    account_code_where: 'řejděte na web <span class="account-add-device__site">{site}/add</span> a zadejte tam uvedený kód.',
     account_code_input: "Zadejte kód",
 
     network_noconnect: "Žádné připojení k síti",
@@ -1178,5 +1180,13 @@ export default {
     loading_progress_step_2: 'Hledání zrcadel',
     loading_progress_step_3: 'Příprava rozšíření',
     loading_progress_step_4: 'Už jen trochu',
-    loading_progress_step_5: 'Už brzy'
+    loading_progress_step_5: 'Už brzy',
+
+    install_extension_rule_1: 'Instalace externího pluginu',
+    install_extension_rule_2: 'Pluginy jsou vytvářeny nezávislými vývojáři a LAMPA neověřuje jejich obsah. Instalací souhlasíte s tím, že:',
+    install_extension_rule_3: '- Některé pluginy mohou požadovat přístup k vašim datům nebo pracovat s neověřenými zdroji.',
+    install_extension_rule_4: '- Pokud vámi nainstalovaný plugin porušuje autorská práva nebo jiné zákony, veškerá odpovědnost za jeho použití je na vás.',
+    install_extension_rule_5: '- Instalujte pouze pluginy z důvěryhodných zdrojů. Pokud máte pochybnosti o bezpečnosti nebo legálnosti pluginu, raději jej neinstalujte.',
+    install_extension_rule_6: 'LAMPA nepodporuje ani neschvaluje pluginy související s pirátským obsahem.',
+    install_extension_rule_7: 'Pokračováním potvrzujete, že rozumíte těmto rizikům.'
 };

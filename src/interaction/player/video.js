@@ -16,6 +16,7 @@ import YouTube from './youtube'
 import TV from './iptv'
 import AD from '../ad/player'
 import Controller from '../controller'
+import Player from '../player'
 
 let listener = Subscribe()
 let html
@@ -47,6 +48,8 @@ let render_trigger
 let click_nums = 0
 let click_timer
 let pause_timer
+
+let video_tube = []
 
 function init(){
     html      = Template.get('player_video')
@@ -122,6 +125,12 @@ function init(){
 
     listener.follow('webos_tracks',(data)=>{
         webos_wait.tracks = convertToArray(data.tracks)
+    })
+
+    registerTube({
+        name: 'YouTube',
+        verify: (src) => src.indexOf('youtube.com') >= 0 || src.indexOf('youtu.be') >= 0,
+        create: YouTube
     })
 }
 
@@ -815,7 +824,7 @@ function create(){
 
     display.append(videobox)
 
-    if(Platform.is('webos') && !webos){
+    if(Platform.is('webos') && !webos && !Player.playdata().voiceovers){
         webos = new WebOS(video)
         webos.callback = ()=>{
             let src = video.src
@@ -841,18 +850,26 @@ function create(){
     bind()
 }
 
-function createYouTubePlayer(url){
-    let videobox = YouTube((object) => {
-        video = object
-    })
+function createTube(src){
+    let verify = verifyTube(src)
+  
+    if(verify) {
+        let videobox = verify.create((object) => {
+            video = object
+        })
 
-    display.append(videobox)
+        !!videobox && display.append(videobox)
 
-    bind()
+        bind()
 
-    setTimeout(()=>{
-        load(url)
-    },100)
+        setTimeout(()=>{
+            load(src)
+        },100)
+
+        return true
+    }
+  
+    return false
 }
 
 function normalizationVisible(status){
@@ -886,7 +903,7 @@ function loader(status){
         dash = false
     }
 
-    if(src.indexOf('youtube.com') >= 0) return createYouTubePlayer(src)
+    if(createTube(src)) return
 
     create()
 
@@ -913,27 +930,46 @@ function loader(status){
 
         if(typeof Hls !== 'undefined'){
             let use_program = Storage.field('player_hls_method') == 'hlsjs'
+            let hls_type    = Player.playdata().hls_type
+            let hls_native  = video.canPlayType('application/vnd.apple.mpegurl')
 
             //если это плеер тайзен, то используем только системный
             if(Platform.is('tizen') && Storage.field('player') == 'tizen') use_program = false
             //если это плеер orsay, то используем только системный
             else  if(Platform.is('orsay') && Storage.field('player') == 'orsay') use_program = false
             //а если системный и m3u8 не поддерживается, то переключаем на программный
-            else if(!use_program && !video.canPlayType('application/vnd.apple.mpegurl')) use_program = true
+            else if(!use_program && !hls_native) use_program = true
 
             //однако, если программный тоже не поддерживается, то переключаем на системный и будет что будет
             if(!Hls.isSupported()) use_program = false
 
-            console.log('Player','use program hls:', use_program)
+            //если плагин выбрал тип hls, то используем его
+            if(hls_type == 'hlsjs')                     use_program = true
+            else if(hls_type == 'native' && hls_native) use_program = false
 
-            if(!Platform.is('tizen')) console.log('Player', 'can play vnd.apple.mpegurl', video.canPlayType('application/vnd.apple.mpegurl') ? true : false)
+            console.log('Player','use program hls:', use_program, 'hlsjs:', Hls.isSupported())
+
+            if(!Platform.is('tizen')) console.log('Player', 'can play vnd.apple.mpegurl', hls_native ? true : false)
             
             //погнали
             if(use_program){
-                hls = new Hls()
+                console.log('Player','hls start program')
+
+                hls = new Hls({
+                    manifestLoadTimeout: Player.playdata().hls_manifest_timeout || 10000,
+                    manifestLoadMaxRetryTimeout: Player.playdata().hls_retry_timeout || 30000,
+                    xhrSetup: function(xhr, url) {
+                        xhr.timeout = Player.playdata().hls_manifest_timeout || 10000
+                        xhr.ontimeout = function() {
+                            console.log('Player','hls manifestLoadTimeout')
+                        }
+                    }
+                })
                 hls.attachMedia(video)
                 hls.loadSource(src)
                 hls.on(Hls.Events.ERROR, function (event, data){
+                    console.log('Player','hls error', data.reason, data.details, data.fatal)
+
                     if(data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR){
                         if(data.reason === "no EXTM3U delimiter") {
                             load(src)
@@ -958,7 +994,16 @@ function loader(status){
 
                 let send_load_ready = false
 
-                hls_parser = new Hls()
+                hls_parser = new Hls({
+                    manifestLoadTimeout: Player.playdata().hls_manifest_timeout || 10000,
+                    manifestLoadMaxRetryTimeout: Player.playdata().hls_retry_timeout || 30000,
+                    xhrSetup: function(xhr, url) {
+                        xhr.timeout = Player.playdata().hls_manifest_timeout || 10000
+                        xhr.ontimeout = function() {
+                            console.log('Player','hls manifestLoadTimeout')
+                        }
+                    }
+                })
                 hls_parser.loadSource(src)
                 hls_parser.on(Hls.Events.ERROR, function (event, data){
                     console.log('Player','hls parse error', data.reason, data.details, data.fatal)
@@ -1234,6 +1279,26 @@ function changeVolume(volume){
     Storage.set('player_volume',volume)
 }
 
+function registerTube(params) {
+    if (typeof params.verify === 'function' && typeof params.create === 'function') {
+        if(video_tube.indexOf(params) == -1) video_tube.push(params)
+
+        return true
+    }
+
+    return false
+}
+
+function verifyTube(src){
+    let find = video_tube.find(e=>e.verify(src))
+
+    return find ? find : false
+}
+
+function removeTube(params) {
+    Arrays.remove(video_tube, params)
+}
+
 /**
  * Уничтожить
  * @param {boolean} type - сохранить с параметрами
@@ -1286,6 +1351,7 @@ function destroy(savemeta){
             dash.destroy()
         }
         catch(e){}
+
         dash = false
 
         dash_destoyed = true
@@ -1296,6 +1362,9 @@ function destroy(savemeta){
             customsubs.destroy()
             customsubs = false
         }
+    }
+    else{
+        Lampa.PlayerInfo.set('bitrate','')
     }
 
     exitFromPIP()
@@ -1344,5 +1413,8 @@ export default {
     setParams,
     normalizationVisible,
     togglePictureInPicture,
-    changeVolume
+    changeVolume,
+    registerTube,
+    removeTube,
+    verifyTube
 }

@@ -86,6 +86,10 @@ function create(params = {}){
             tab.find('.search-source__count').html('&nbsp;')
         })
 
+        result.listener.follow('clear',()=>{
+            tab.find('.search-source__count').text(0)
+        })
+
         result.listener.follow('finded',(e)=>{
             tab.removeClass('search-source--loading')
 
@@ -165,6 +169,10 @@ function create(params = {}){
                 if(!result.params.lazy || active === result) result.search(query, immediately)
             })
         }
+    }
+
+    this.cancel = function(){
+        results.forEach(result => result.cancel())
     }
 
     this.tabs = function(){

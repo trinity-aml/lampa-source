@@ -16,10 +16,10 @@ import Head from '../components/head'
 import Loading from '../interaction/loading'
 import WebWorker from './worker'
 import Manifest from './manifest'
-import Timeline from '../interaction/timeline'
 import Input from '../components/settings/input'
 import ParentalControl from '../interaction/parental_control'
 import Platform from './platform'
+import Timeline from './account/timeline'
 
 let body
 let network   = new Reguest()
@@ -58,10 +58,10 @@ function init(){
     })
 
     Storage.listener.follow('change',(e)=>{
-        if(e.name == 'account_use') timelines(true)
+        if(e.name == 'account_use') Timeline.update(true)
 
         if(e.name == 'account'){
-            timelines(true)
+            Timeline.update(true)
 
             updateProfileIcon()
         }
@@ -83,7 +83,7 @@ function init(){
 
     Socket.listener.follow('open',checkValidAccount)
     Socket.listener.follow('open',()=>{
-        if(Date.now() - start_time > 1000 * 60 * 5) timelines(false, true)
+        if(Date.now() - start_time > 1000 * 60 * 5) Timeline.update(false, true)
     })
 
     Favorite.listener.follow('add,added',(e)=>{
@@ -111,7 +111,7 @@ function init(){
     checkProfile(()=>{
         getUser()
 
-        timelines()
+        Timeline.update()
 
         updateProfileIcon()
 
@@ -141,7 +141,7 @@ function checkProfile(call){
                 if(main){
                     account.profile = main
 
-                    Storage.set('account', account)
+                    Storage.set('account', account, true)
                 }
 
                 call()
@@ -222,76 +222,18 @@ function checkPremium(){
     return user.id ? Utils.countDays(Date.now(), user.premium) : 0
 }
 
-function timelines(full, visual){
-    let account = Storage.get('account','{}')
-
-    if(account.token && Storage.field('account_use') && window.lampa_settings.account_use && window.lampa_settings.account_sync){
-        let url = api() + 'timeline/all'
-        let all = full
-
-        if(Storage.get('timeline_full_update_time','0') + 1000 * 60 * 60 * 24 < Date.now()) all = true
-
-        if(all) url = url + '?full=true'
-
-        network.silent(url,(result)=>{
-            if(visual){
-                for(let i in result.timelines){
-                    let time = result.timelines[i]
-                        time.received = true
-
-                    Timeline.update(time)
-                }
-            }
-            else{
-                let name = 'file_view_' + account.profile.id
-
-                if(window.localStorage.getItem(name) === null){
-                    Storage.set(name, Arrays.clone(Storage.cache('file_view',10000,{})))
-                }
-
-                let viewed = Storage.cache(name,10000,{})
-
-                for(let i in result.timelines){
-                    let time = result.timelines[i]
-
-                    viewed[i] = time
-
-                    Arrays.extend(viewed[i],{
-                        duration: 0,
-                        time: 0,
-                        percent: 0
-                    })
-
-                    delete viewed[i].hash
-                }
-
-                Storage.set(name, viewed)
-            }
-            
-            Storage.set('timeline_full_update_time',Date.now())
-        },()=>{
-            setTimeout(timelines.bind(timelines,full), 1000 * 60)
-        },false,{
-            headers: {
-                token: account.token,
-                profile: account.profile.id
-            }
-        })
-    }
-}
 
 function save(method, type, card){
     let account = workingAccount()
 
     if(account){
-        let list = bookmarks
-        let find = list.find((elem)=>elem.card_id == card.id && elem.type == type)
+        let find = bookmarks.find((elem)=>elem.card_id == card.id && elem.type == type)
 
         network.clear()
 
         network.silent(api() + 'bookmarks/'+method, false, false,{
             type: type,
-            data: JSON.stringify(card),
+            data: JSON.stringify(Utils.clearCard(Arrays.clone(card))),
             card_id: card.id,
             id: find ? find.id : 0
         },{
@@ -303,19 +245,27 @@ function save(method, type, card){
 
         if(method == 'remove'){
             if(find){
-                Arrays.remove(list, find)
+                Arrays.remove(bookmarks, find)
             } 
         }
         else{
-            if(find) Arrays.remove(list, find)
+            if(find) Arrays.remove(bookmarks, find)
             
-            Arrays.insert(list,0,{
-                id: 0,
+            Arrays.insert(bookmarks,0,{
+                id: find ? find.id : 0,
+                cid: find ? find.cid : account.id,
                 card_id: card.id,
                 type: type,
-                data: JSON.parse(JSON.stringify(card)),
-                profile: account.profile.id
+                data: Utils.clearCard(Arrays.clone(card)),
+                profile: account.profile.id,
+                time: Date.now()
             })
+
+            bookmarks.filter(elem=>elem.card_id == card.id).forEach((elem)=>{
+                elem.time = Date.now()
+            })
+
+            bookmarks.sort((a,b)=>b.time - a.time)
         }
 
         updateChannels()
@@ -479,7 +429,7 @@ function addDevice(){
     let displayModal = ()=>{
         let html = Template.get('account_add_device')
 
-        Utils.imgLoad(html.find('img'), Utils.protocol() + Manifest.cub_domain+'/img/qr/qr_device.svg',()=>{
+        Utils.imgLoad(html.find('img'), Utils.protocol() + Manifest.cub_domain+'/img/other/qr-add-device.png',()=>{
             html.addClass('loaded')
         })
 
@@ -520,10 +470,10 @@ function addDevice(){
                     login(()=>{
                         localStorage.setItem('protocol', window.location.protocol == 'https:' ? 'https' : 'http')
 
-                        login(()=>{
+                        login((e)=>{
                             Loading.stop()
 
-                            Noty.show(Lang.translate('account_code_error'))
+                            Noty.show(Lang.translate(network.errorCode(e) == 200 ? 'account_code_error' : 'network_noconnect' ))
                         })
                     })
                 }
@@ -832,7 +782,7 @@ function voiteDiscuss(params, call){
 }
 
 function updateChannels(){
-    if(Platform.is('android') && typeof AndroidJS.saveBookmarks !== 'undefined'){
+    if(Platform.is('android') && typeof AndroidJS.saveBookmarks !== 'undefined' && bookmarks.length){
         WebWorker.json({
             type: 'stringify',
             data: bookmarks
@@ -847,13 +797,17 @@ function updateBookmarks(rows, call){
         type: 'account_bookmarks_parse',
         data: rows
     },(e)=>{
-        updateChannels(e.data)
-
         bookmarks = e.data
+
+        bookmarks.forEach((elem)=>{
+            elem.data = Utils.clearCard(elem.data)
+        })
+
+        updateChannels()
 
         if(call) call()
         
-        listener.send('update_bookmarks',{rows, bookmarks: e.data})
+        listener.send('update_bookmarks',{rows, bookmarks})
     })
 }
 
@@ -996,13 +950,21 @@ function backup(){
                     network.silent(api() + 'users/backup/import',(data)=>{
                         
                         if(data.data){
-                            let keys = Arrays.getKeys(data.data)
+                            let imp  = 0
+                            let ers  = 0
 
                             for(let i in data.data){
-                                localStorage.setItem(i, data.data[i])
+                                try{
+                                    localStorage.setItem(i, data.data[i])
+
+                                    imp++
+                                }
+                                catch(e){
+                                    ers++
+                                }
                             }
 
-                            Noty.show(Lang.translate('account_import_secuses') + ' - '+Lang.translate('account_imported')+' ('+keys.length+') - ' + Lang.translate('account_reload_after'))
+                            Noty.show(Lang.translate('account_import_secuses') + ' - '+Lang.translate('account_imported')+' ('+imp+'/'+ers+') - ' + Lang.translate('account_reload_after'))
 
                             setTimeout(()=>{
                                 window.location.reload()
@@ -1115,16 +1077,46 @@ function logoff(data){
     let account = Storage.get('account','{}')
 
     if(account.token && account.email == data.email){
-        Storage.set('account','')
-        Storage.set('account_use',false)
-        Storage.set('account_user','')
-        Storage.set('account_email','')
-        Storage.set('account_notice','')
-        Storage.set('account_bookmarks','')
+        Storage.set('account','',true)
+        Storage.set('account_use',false,true)
+        Storage.set('account_user','',true)
+        Storage.set('account_email','',true)
+        Storage.set('account_notice','',true)
+        Storage.set('account_bookmarks','',true)
 
         $('.head .open--profile').addClass('hide')
 
         window.location.reload()
+    }
+}
+
+function test(call){
+    let account = Storage.get('account','{}')
+
+    console.log('Account','start test')
+
+    if(account.token && window.lampa_settings.account_use && window.lampa_settings.account_sync){
+        network.silent(api() + 'bookmarks/all?full=1',(result)=>{
+            console.log('Account', 'test bookmarks:', Utils.shortText(result, 300))
+
+            if(call) call()
+        },()=>{
+            console.log('Account', 'test bookmarks: error')
+
+            if(call) call()
+        },false,{
+            dataType: 'text',
+            timeout: 8000,
+            headers: {
+                token: account.token,
+                profile: account.profile.id
+            }
+        })
+    }
+    else{
+        console.log('Account', 'test bookmarks: no sync')
+
+        if(call) call()
     }
 }
 
@@ -1160,6 +1152,7 @@ let Account = {
     updateUser: ()=>{
         getUser()
     },
+    test
 }
 
 Object.defineProperty(Account, 'hasPremium', {

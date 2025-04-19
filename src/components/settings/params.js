@@ -104,6 +104,7 @@ function init(){
             'infuse': 'Infuse',
             'mpv': 'MPV',
             'nplayer': 'nPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
 
         select('player_iptv',{
@@ -112,6 +113,7 @@ function init(){
             'infuse': 'Infuse',
             'mpv': 'MPV',
             'nplayer': 'nPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
 
         select('player_torrent',{
@@ -120,6 +122,7 @@ function init(){
             'infuse': 'Infuse',
             'mpv': 'MPV',
             'nplayer': 'nPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
     }
     else if(Platform.is('apple')){
@@ -131,6 +134,7 @@ function init(){
             'infuse': 'Infuse',
             'vidhub': 'Vidhub',
             'svplayer': 'SVPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
 
         select('player_iptv',{
@@ -140,6 +144,7 @@ function init(){
             'nplayer': 'nPlayer',
             'infuse': 'Infuse',
             'svplayer': 'SVPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
 
         select('player_torrent',{
@@ -150,19 +155,20 @@ function init(){
             'infuse': 'Infuse',
             'vidhub': 'Vidhub',
             'svplayer': 'SVPlayer',
+            'tracyplayer': 'TracyPlayer',		
         },'inner')
     }
     else if(Platform.is('apple_tv')){
         select('player',{
-            'inner': '#{settings_param_player_inner}',
+            'tvos': '#{settings_param_player_inner_tvos} tvOS Universal',
+            'tvosl': '#{settings_param_player_inner_tvos} tvOS Online',
+            'tvosSelect': '#{settings_param_player_outside}',
             'vlc': 'VLC',
             'infuse': 'Infuse',
-            'senplayer': 'SenPlayer',
             'vidhub': 'Vidhub',
-            'svplayer': 'SVPlayer',
-            'tvos': 'tvOS',
-            'tvosSelect': '#{settings_param_player_tvOS}'
-        },'inner')
+            'inner': '#{settings_param_player_inner}',
+            'svplayer': 'SVPlayer'
+        },'tvos')
 
         select('player_iptv',{
             'inner': '#{settings_param_player_inner}',
@@ -173,14 +179,14 @@ function init(){
         },'inner')
 
         select('player_torrent',{
-            'inner': '#{settings_param_player_inner}',
-            'vlc': 'VLC',
+            'tvos': '#{settings_param_player_inner_tvos} tvOS Universal',
+            'tvosSelect': '#{settings_param_player_outside}',
             'infuse': 'Infuse',
-            'senplayer': 'SenPlayer',
             'vidhub': 'Vidhub',
-            'svplayer': 'SVPlayer',
-            'tvos': 'tvOS'
-        },'inner')
+            'vlc': 'VLC',
+            'inner': '#{settings_param_player_inner}',
+            'svplayer': 'SVPlayer'
+        },'tvos')
     }
 
     trigger('glass_style', Platform.screen('mobile'))
@@ -199,6 +205,11 @@ function init(){
         'lampa': '#{settings_param_keyboard_lampa}',
         'integrate': '#{settings_param_keyboard_system}'
     }, Platform.screen('mobile') || Platform.is('apple_tv') || Platform.macOS() ? 'integrate' : 'lampa')
+
+    select('navigation_type', {
+        'controll': '#{settings_param_navigation_remote}',
+        'mouse': '#{settings_param_navigation_mouse}'
+    }, Platform.is('browser') || Platform.desktop() ? 'mouse' : 'controll')
 
 
     //язык и комбинации для поиска
@@ -297,6 +308,7 @@ function bind(elems, elems_html){
             Input.edit({
                 elem: elem,
                 name: name,
+                nomic: true,
                 value: elem.data('string') ? window.localStorage.getItem(name) || defaults[name] : Storage.get(name,defaults[name]) + ''
             },(new_value)=>{
                 Storage.set(name,new_value)
@@ -580,11 +592,6 @@ select('card_views_type', {
     'preload': '#{settings_param_card_view_load}',
     'view': '#{settings_param_card_view_all}'
 }, 'preload')
-
-select('navigation_type', {
-    'controll': '#{settings_param_navigation_remote}',
-    'mouse': '#{settings_param_navigation_mouse}'
-}, 'controll')
 
 select('keyboard_type', {
     'lampa': '#{settings_param_keyboard_lampa}',

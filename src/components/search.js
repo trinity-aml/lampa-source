@@ -155,6 +155,8 @@ function createKeyboard(){
         }
         else{
             search.find('.search__input').toggleClass('filled', false).text(Lang.translate('search_input') + '...')
+
+            sources.search('')
         }
     })
 
@@ -164,7 +166,7 @@ function createKeyboard(){
     })
 
     keyboard.listener.follow('hover',()=>{
-        sources.search(input)
+        input.length <= 2 ? sources.cancel() : sources.search(input)
     })
 
     keyboard.listener.follow('back',destroy)

@@ -61,6 +61,7 @@
 
         @media screen and (max-width: $media_xm) {
             height: auto !important;
+            font-size: 1.15em;
         }
 
         > * {
@@ -241,6 +242,10 @@
             .settings-input__content{
                 margin: 0 auto;
             }
+        }
+
+        &--focus .settings-input__content{
+            justify-content: start;
         }
     }
 }

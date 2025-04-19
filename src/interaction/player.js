@@ -140,7 +140,7 @@ function init(){
 
     /** Дорожки полученые из видео */
     Video.listener.follow('tracks', (e)=>{
-        Panel.setTracks(e.tracks)
+        if(!work.voiceovers) Panel.setTracks(e.tracks)
     })
 
     /** Субтитры полученые из видео */
@@ -302,13 +302,32 @@ function init(){
     Panel.listener.follow('quality',(e)=>{
         Video.destroy(true)
 
-        if(work) work.quality_switched = e.name
+        if(work){
+            work.quality_switched = e.name
+            work.url = e.url
+        }
 
         Video.url(e.url, true)
 
         if(work && work.timeline){
             work.timeline.continued = false
             work.timeline.continued_bloc = false
+        }
+    })
+
+    /** Переключили поток */
+    Panel.listener.follow('flow',(e)=>{
+        Video.destroy(true)
+
+        Video.url(e.url, true)
+
+        if(work && work.timeline){
+            work.url = e.url
+
+            if(work.timeline){
+                work.timeline.continued = false
+                work.timeline.continued_bloc = false
+            }
         }
     })
 
@@ -525,6 +544,8 @@ function destroy(){
 
     $('body').removeClass('player--viewing')
 
+    if($('body').hasClass('selectbox--open')) Select.hide()
+
     listener.send('destroy',{})
 }
 
@@ -679,15 +700,18 @@ function locked(data, call){
 function start(data, need, inner){
     let player_need = 'player' + (need ? '_' + need : '')
 
-    if(launch_player == 'lampa' || launch_player == 'inner' || data.url.indexOf('youtube.com') >= 0) inner()
+    if(data.launch_player) launch_player = data.launch_player
+
+    if(launch_player == 'lampa' || launch_player == 'inner' || Video.verifyTube(data.url)) inner()
     else if(Platform.is('apple')){
         data.url = data.url.replace('&preload','&play').replace(/\s/g,'%20')
 
         if(Storage.field(player_need) == 'vlc') window.open('vlc://' + data.url)
         else if(Storage.field(player_need) == 'nplayer') window.open('nplayer-' + data.url)
         else if(Storage.field(player_need) == 'infuse') window.open('infuse://x-callback-url/play?url='+encodeURIComponent(data.url))
-        else if(Storage.field(player_need) == 'vidhub') window.open('open-vidhub://x-callback-url/open?url='+encodeURIComponent(data.url))
+            else if(Storage.field(player_need) == 'vidhub') window.open('open-vidhub://x-callback-url/open?&url='+encodeURIComponent(data.url))
 	    else if(Storage.field(player_need) == 'svplayer') window.open('svplayer://x-callback-url/stream?url='+encodeURIComponent(data.url))
+            else if(Storage.field(player_need) == 'tracyplayer') window.open('tracy://open?url='+encodeURIComponent(data.url))		    
         else if(Storage.field(player_need) == 'ios'){
             html.addClass('player--ios')
             inner()
@@ -708,10 +732,12 @@ function start(data, need, inner){
 
         if(Storage.field(player_need) == 'vlc') window.location.assign('vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(data.url))
         else if(Storage.field(player_need) == 'infuse') window.location.assign('infuse://x-callback-url/play?url='+encodeURIComponent(data.url))
-        else if(Storage.field(player_need) == 'senplayer') window.location.assign('SenPlayer://x-callback-url/play?on-success=lampa://&on-failed=lampa://&url='+encodeURIComponent(data.url))
-        else if(Storage.field(player_need) == 'vidhub') window.open('open-vidhub://x-callback-url/open?on-success=lampa://&on-failed=lampa://&url='+encodeURIComponent(data.url))
+        else if(Storage.field(player_need) == 'senplayer') window.location.assign('SenPlayer://x-callback-url/play?url='+encodeURIComponent(data.url))
+        else if(Storage.field(player_need) == 'vidhub') window.open('open-vidhub://x-callback-url/open?&url='+encodeURIComponent(data.url))
         else if(Storage.field(player_need) == 'svplayer') window.location.assign('svplayer://x-callback-url/stream?url=' + encodeURIComponent(data.url))
+        else if(Storage.field(player_need) == 'tracyplayer') window.location.assign('tracy://open?url=' + encodeURIComponent(data.url))		
         else if (Storage.field(player_need) == 'tvos') window.location.assign('lampa://video?player=tvos&src=' + encodeURIComponent(data.url) + '&playlist=' + encodeURIComponent(JSON.stringify(data.playlist)))
+        else if (Storage.field(player_need) == 'tvosl') window.location.assign('lampa://video?player=tvosav&src=' + encodeURIComponent(data.url) + '&playlist=' + encodeURIComponent(JSON.stringify(data.playlist)))
         else if (Storage.field(player_need) == 'tvosSelect') window.location.assign('lampa://video?player=lists&src=' + encodeURIComponent(data.url) + '&playlist=' + encodeURIComponent(JSON.stringify(data.playlist)))
             else inner()
     }
@@ -1063,5 +1089,6 @@ export default {
     close: backward,
     getUrlQuality,
     loading,
-    timecodeRecording
+    timecodeRecording,
+    playdata: ()=>work
 }
