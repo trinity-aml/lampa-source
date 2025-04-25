@@ -43,6 +43,7 @@ class Vast{
         this.network.silent(Utils.protocol() + domain+'/api/ad/vast',(data)=>{
             loaded_data.time = Date.now()
             loaded_data.ad   = data.ad.filter(a=>a.active)
+            loaded_data.ad   = loaded_data.ad.filter(a=>a.platforms ? a.platforms.indexOf(Platform.get()) >= 0 : true)
             
             if(loaded_data.ad.length) this.start()
             else this.listener.send('empty')
@@ -181,10 +182,12 @@ class Vast{
                 Storage.set('vast_device_uid', uid)
             }
 
+            let pixel_ratio = window.devicePixelRatio || 1
+
             let u = block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random()))
                 u = u.replace('{TIME}',Date.now())
-                u = u.replace('{WIDTH}', window.innerWidth)
-                u = u.replace('{HEIGHT}', window.innerHeight)
+                u = u.replace('{WIDTH}', Math.round(window.innerWidth * pixel_ratio))
+                u = u.replace('{HEIGHT}', Math.round(window.innerHeight * pixel_ratio))
                 u = u.replace('{PLATFORM}', Platform.get())
                 u = u.replace('{UID}', uid)
 
