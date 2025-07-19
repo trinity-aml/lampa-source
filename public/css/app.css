@@ -377,7 +377,9 @@ body.keyboard-input--visible .normalization {
 }
 
 body.ambience--enable .wrap,
-body.ambience--enable .head {
+body.ambience--enable .head,
+body:not(.glass--style).keyboard-input--visible .wrap,
+body:not(.glass--style).keyboard-input--visible .head {
   display: none;
 }
 
@@ -1177,6 +1179,118 @@ body.light--version .wrap__left {
     background: #fcaa38;
   }
 }
+@-webkit-keyframes marker-status-live {
+  0% {
+    -webkit-box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+            box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+    background-color: #76e67a;
+  }
+  70% {
+    -webkit-box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+            box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    -webkit-box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+            box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@-moz-keyframes marker-status-live {
+  0% {
+    -moz-box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+         box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+    background-color: #76e67a;
+  }
+  70% {
+    -moz-box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+         box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    -moz-box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+         box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@-o-keyframes marker-status-live {
+  0% {
+    box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+    background-color: #76e67a;
+  }
+  70% {
+    box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@keyframes marker-status-live {
+  0% {
+    -webkit-box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+       -moz-box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+            box-shadow: 0 0 0 0 rgba(118, 230, 122, 0.7);
+    background-color: #76e67a;
+  }
+  70% {
+    -webkit-box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+       -moz-box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+            box-shadow: 0 0 0 0.4em rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    -webkit-box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+       -moz-box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+            box-shadow: 0 0 0 0 rgba(234, 78, 78, 0);
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@-webkit-keyframes marker-status-pass {
+  0% {
+    background-color: #76e67a;
+  }
+  65% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@-moz-keyframes marker-status-pass {
+  0% {
+    background-color: #76e67a;
+  }
+  65% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@-o-keyframes marker-status-pass {
+  0% {
+    background-color: #76e67a;
+  }
+  65% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+@keyframes marker-status-pass {
+  0% {
+    background-color: #76e67a;
+  }
+  65% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
 .head {
   position: fixed;
   top: 0;
@@ -1392,6 +1506,33 @@ body.light--version .wrap__left {
   .head__time {
     display: none;
   }
+}
+.head__markers {
+  margin: 0 1em;
+}
+.head__markers-item {
+  width: 0.32em;
+  height: 0.32em;
+  -webkit-border-radius: 100%;
+     -moz-border-radius: 100%;
+          border-radius: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  position: relative;
+}
+.head__markers-item + .head__markers-item {
+  margin-top: 0.25em;
+}
+.head__markers-item.status--live {
+  background: #76e67a;
+}
+.head__markers-item.status--error {
+  background: #ff6868;
+}
+.head__markers-item.status--pass {
+  -webkit-animation: marker-status-pass 0.1s ease infinite;
+     -moz-animation: marker-status-pass 0.1s ease infinite;
+       -o-animation: marker-status-pass 0.1s ease infinite;
+          animation: marker-status-pass 0.1s ease infinite;
 }
 
 body.true--mobile .head__logo-icon,
@@ -6696,6 +6837,9 @@ body.selectbox--open .selectbox__layer {
   body.size--bigger .card-more {
     font-size: 1.14em;
   }
+  body.size--bigger .card.card--collection + .card-more {
+    width: 14.3em;
+  }
 }
 .loading-layer {
   position: fixed;
@@ -8714,30 +8858,37 @@ body.true--mobile .notice {
       -ms-flex-align: center;
           align-items: center;
   white-space: nowrap;
-  -webkit-flex-wrap: wrap;
-      -ms-flex-wrap: wrap;
-          flex-wrap: wrap;
-}
-.torrent-item__details > * {
-  overflow: hidden;
-  -o-text-overflow: ellipsis;
-     text-overflow: ellipsis;
 }
 @media screen and (max-width: 767px) {
   .torrent-item__details > * {
-    width: 33.3%;
-    margin: 0.3em 0 0 0 !important;
+    margin: 0.3em 0.3em 0 0 !important;
+  }
+}
+@media screen and (max-width: 580px) {
+  .torrent-item__details {
+    -webkit-flex-wrap: wrap;
+        -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
   }
 }
 .torrent-item__date {
   margin-right: 1em;
 }
 .torrent-item__tracker {
-  margin-right: auto;
+  margin-right: 1em;
   overflow: hidden;
   -o-text-overflow: ellipsis;
      text-overflow: ellipsis;
-  max-width: 11em;
+  -webkit-box-flex: 1;
+  -webkit-flex-grow: 1;
+     -moz-box-flex: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
+}
+@media screen and (max-width: 580px) {
+  .torrent-item__tracker {
+    width: 80%;
+  }
 }
 .torrent-item__size {
   background-color: #fff;
@@ -8746,6 +8897,11 @@ body.true--mobile .notice {
           border-radius: 0.3em;
   color: #000;
   padding: 0.3em 0.5em;
+}
+@media screen and (max-width: 580px) {
+  .torrent-item__size {
+    margin-left: auto !important;
+  }
 }
 .torrent-item__bitrate, .torrent-item__grabs, .torrent-item__seeds {
   margin-right: 1em;
@@ -12019,7 +12175,11 @@ body.system--keyboard .search-box .simple-keyboard-input {
 }
 .extensions__item-name {
   font-size: 1.1em;
+  line-height: normal;
   margin-bottom: 0.8em;
+  overflow: hidden;
+  -o-text-overflow: ellipsis;
+     text-overflow: ellipsis;
 }
 .extensions__item-descr {
   line-height: 1.5;

@@ -71,13 +71,13 @@ function Card(data, params = {}){
             
             if(elem_title) elem_title.innerText = data.title
 
-            if(data.first_air_date){
+            if(data.original_name){
                 let type_elem = document.createElement('div')
                     type_elem.classList.add('card__type')
-                    type_elem.innerText = data.first_air_date ? 'TV' : 'MOV'
+                    type_elem.innerText = data.original_name ? 'TV' : 'MOV'
 
                 this.card.querySelector('.card__view').appendChild(type_elem)
-                this.card.classList.add(data.first_air_date ? 'card--tv' : 'card--movie')
+                this.card.classList.add(data.original_name ? 'card--tv' : 'card--movie')
             }
             
             
@@ -157,7 +157,7 @@ function Card(data, params = {}){
 
             let qu = data.quality || data.release_quality
 
-            if(qu && Storage.field('card_quality')){
+            if(qu && Storage.field('card_quality') && !data.original_name){
                 let quality = document.createElement('div')
                     quality.classList.add('card__quality')
                 
@@ -229,7 +229,12 @@ function Card(data, params = {}){
         if(!Storage.field('card_episodes')) return
 
         if(!this.watched_checked){
-            Timetable.get(data, (episodes)=>{
+            function get(callback){
+                if(data.original_name) Timetable.get(data, callback)
+                else callback([])
+            }
+
+            get(episodes=>{
                 let viewed
 
                 episodes.forEach(ep=>{
@@ -238,6 +243,34 @@ function Card(data, params = {}){
 
                     if(view.percent) viewed = {ep, view}
                 })
+
+                if(!viewed && data.original_name){
+                    let last  = Storage.get('online_watched_last', '{}')
+                    let filed = last[Utils.hash(data.original_title)]
+
+                    if(filed && filed.episode){
+                        viewed = {
+                            ep: {
+                                episode_number: filed.episode,
+                                name: Lang.translate('full_episode') + ' ' + filed.episode,
+                            },
+                            view: Timeline.view(Utils.hash([filed.season, filed.season > 10 ? ':' : '',filed.episode,data.original_title].join('')))
+                        }
+                    }
+                }
+
+                if(!viewed && !data.original_name){
+                    let time = Timeline.view(Utils.hash([data.original_title].join('')))
+
+                    if(time.percent) {
+                        viewed = {
+                            ep: {
+                                name: Lang.translate('title_viewed') + ' ' + (time.time ? Utils.secondsToTimeHuman(time.time) : time.percent + '%'),
+                            },
+                            view: time
+                        }
+                    }
+                }
 
                 if(viewed){
                     let soon = []
@@ -265,7 +298,7 @@ function Card(data, params = {}){
                         div.classList.add('card-watched__item')
                         div.appendChild(span)
 
-                        span.innerText = ep.episode_number + ' - ' + (days > 0 ? Lang.translate('full_episode_days_left') + ': ' + days : (ep.name || Lang.translate('noname')))
+                        span.innerText = (ep.episode_number ?  ep.episode_number + ' - ' : '') + (days > 0 ? Lang.translate('full_episode_days_left') + ': ' + days : (ep.name || Lang.translate('noname')))
 
                         if(ep == viewed.ep) div.appendChild(Timeline.render(viewed.view)[0])
 

@@ -3,6 +3,7 @@ import Request from './reguest'
 import Status from './status'
 import Storage from './storage'
 import Utils from './math'
+import Markers from './markers'
 
 let network   = new Request()
 let connected = true
@@ -59,14 +60,18 @@ function find(protocol, callback){
 }
 
 function check(protocol, mirror, call){
+    let random = Math.random() + ''
+
     network.silent(protocol + mirror + '/api/checker', (str)=>{
-        if(str == 'ok') call(true)
+        if(str == random) call(true)
         else call(false)
     }, (e)=>{
         call(false)
-    }, false, {
+    }, {
+        data: random,
+    }, {
         dataType: 'text',
-        timeout: 1000 * 8
+        timeout: 1000 * 7
     })
 }
 
@@ -92,6 +97,9 @@ function task(call){
         else if(Storage.field('protocol') == 'http' && http.length) redirect(http[0])
 
         if(!https.length && !http.length) connected = false
+
+        if(!connected) Markers.error('mirrors')
+        else Markers.normal('mirrors')
         
         if(call) call()
     }

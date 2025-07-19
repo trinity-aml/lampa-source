@@ -100,11 +100,14 @@ import Task from './utils/loading'
 import App from './utils/app'
 import LoadingProgress from './interaction/loading_progress'
 import Logs from './utils/logs'
+import StorageMenager from './interaction/storage_manager'
+import Markers from './utils/markers'
 
 import OtherTorserver from './utils/other/torrserver'
 import OtherWatched from './utils/other/watched'
 import OtherSettings from './utils/other/settings'
 import OtherLibs from './utils/other/libs'
+import OtherMetric from './utils/other/metric'
 import OtherGOD from './utils/other/god'
 import OtherRemoteFavorites from './utils/other/remote_favorites'
 import OtherCards from './utils/other/cards'
@@ -259,7 +262,8 @@ function initClass(){
         Processing,
         ParentalControl,
         VPN,
-        Bell
+        Bell,
+        StorageMenager
     }
 }
 
@@ -409,6 +413,7 @@ function startApp(){
     Favorite.init()
     Background.init()
     Head.init()
+    Markers.init()
     Notice.init()
     Bell.init()
     Menu.init()
@@ -448,7 +453,7 @@ function startApp(){
 
     let ratio = window.devicePixelRatio || 1
 
-    console.log('App','screen size:', (window.innerWidth * ratio) + ' / ' + (window.innerHeight * ratio))
+    console.log('App','screen size:', Math.round(window.innerWidth * ratio) + ' / ' + Math.round(window.innerHeight * ratio))
     console.log('App','interface size:', window.innerWidth + ' / ' + window.innerHeight)
     console.log('App','pixel ratio:', window.devicePixelRatio)
     console.log('App','user agent:', navigator.userAgent)
@@ -458,6 +463,10 @@ function startApp(){
     console.log('App','is PWA:', Utils.isPWA())
     console.log('App','platform:', Storage.get('platform', 'noname'))
     console.log('App','version:', Manifest.app_version)
+
+    //записываем uid
+
+    if(!Storage.get('lampa_uid','')) Storage.set('lampa_uid', Utils.uid())
 
     //ренедрим лампу
 
@@ -484,7 +493,7 @@ function startApp(){
     OtherTorserver.init()
     OtherWatched.init()
     OtherSettings.init()
-    OtherLibs.init()
+    OtherMetric.init()
     OtherGOD.init()
     OtherRemoteFavorites.init()
     OtherCards.init()
@@ -532,6 +541,10 @@ function loadTask(){
         LoadingProgress.step(5)
 
         Account.task(next)
+    })
+
+    Task.secondary(()=>{
+        OtherLibs.init()
     })
 
     Task.secondary(()=>{

@@ -2,8 +2,8 @@ let object = {
     author: 'Yumata',
     github: 'https://github.com/yumata/lampa-source',
     github_lampa: 'https://yumata.github.io/lampa/',
-    css_version: '2.6.5',
-    app_version: '2.4.0',
+    css_version: '2.7.0',
+    app_version: '2.4.6',
     cub_site: 'cub.rip'
 }
 
@@ -21,9 +21,20 @@ Object.defineProperty(object, 'plugins', {
     }
 })
 
+/**
+ * Старые зеркала, которые не используются больше, но могут быть полезны для обратной совместимости
+ */
+Object.defineProperty(object, 'old_mirrors', { 
+    get: ()=> ['cub.red', 'standby.cub.red', 'kurwa-bober.ninja', 'nackhui.com'],
+    set: ()=> {}
+})
+
+/**
+ * Список актуальных зеркал
+ */
 Object.defineProperty(object, 'cub_mirrors', { 
     get: ()=> {
-        let lampa = ['cub.red', 'standby.cub.red', 'kurwa-bober.ninja']
+        let lampa = ['cub.red', 'durex.monster', 'cubnotrip.top']
         let users = localStorage.getItem('cub_mirrors') || '[]'
 
         try {
@@ -41,6 +52,17 @@ Object.defineProperty(object, 'cub_mirrors', {
     set: ()=> {}
 })
 
+/**
+ * Список зеркал для сокета, вынесены отдельно, так как могут отличаться от обычных зеркал
+ */
+Object.defineProperty(object, 'soc_mirrors', { 
+    get: ()=> ['cub.red', 'kurwa-bober.ninja', 'nackhui.com'],
+    set: ()=> {}
+})
+
+/**
+ * Текущее доменное имя, которое используется для работы с CUB
+ */
 Object.defineProperty(object, 'cub_domain', { 
     get: ()=> {
         let use = localStorage.getItem('cub_domain') || ''

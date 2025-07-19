@@ -11,6 +11,8 @@ plugins/interface
 plugins/cardify
 plugins/black-friday
 plugins/christmas
+plugins/broadcast
+plugins/sport
 node_modules/
 svg/
 temp/

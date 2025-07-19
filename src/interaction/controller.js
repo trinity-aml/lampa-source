@@ -9,6 +9,10 @@ import Noty from './noty'
 import Keypad from './keypad'
 import DeviceInput from '../utils/device_input'
 import Sound from '../utils/sound'
+import Select from './select'
+import Modal from './modal'
+import Player from './player'
+import Search from '../components/search'
 
 let listener = Subscribe()
 
@@ -16,6 +20,7 @@ let active
 let active_name = ''
 let controlls = {}
 let select_active
+let try_close = false
 
 function observe(){
     if(typeof MutationObserver == 'undefined') return
@@ -125,6 +130,8 @@ function toggle(name){
     if(active && active.gone) active.gone(name)
 
     if(controlls[name]){
+        if(name == 'content') toContent()
+        
         active      = controlls[name]
         active_name = name
         
@@ -341,29 +348,60 @@ function enabled(){
 }
 
 function toContent(){
+    if(try_close) return
+
+    try_close = true
+
     let trys = 0
 
     Screensaver.stopSlideshow()
 
-    let go = ()=>{
-        let contrl = enabled()
-
-        let any = parseInt([
+    let any = ()=>{
+        return parseInt([
             $('body').hasClass('settings--open') ? 1 : 0,
             $('body').hasClass('selectbox--open') ? 1 : 0,
             $('.modal,.youtube-player,.player,.search-box,.search').length ? 1 : 0,
         ].join(''))
+    }
+
+    let close = ()=>{
+        let contrl = enabled()
 
         trys++
 
-        if(any){
-            if(contrl.controller.back) contrl.controller.back()
+        if(any()){
+            try{
+                if(contrl.controller.back) contrl.controller.back()
+            }
+            catch(e){}
             
-            if(trys < 10) go()
+            if(trys < 10) close()
         }
     }
 
-    go()
+    let remove = ()=>{
+        try{
+            if($('body').hasClass('settings--open')) $('body').removeClass('settings--open')
+
+            if($('body').hasClass('selectbox--open')) Select.close()
+
+            if($('.modal').length) Modal.close()
+
+            if($('.player').length) Player.close()
+
+            if($('.search-box').length) $('.search-box').remove()
+
+            if($('body').hasClass('search--open')) Search.close()
+
+            $('body').removeClass('ambience--enable')
+        }
+        catch(e){}
+    }
+
+    close()
+    remove()
+
+    try_close = false
 }
 
 function clear(){

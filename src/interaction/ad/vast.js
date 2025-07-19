@@ -13,6 +13,8 @@ let loaded_data = {
     time: 0
 }
 
+let last_responce = {}
+
 function stat(method, name){
     $.ajax({
         dataType: 'text',
@@ -20,6 +22,53 @@ function stat(method, name){
     })
 }
 
+function log(data){
+    $.ajax({
+        type: 'POST', // изменено на POST
+        dataType: 'text',
+        url: Utils.protocol() + Manifest.cub_domain + '/api/adv/log',
+        data: {
+            platform: Platform.get(),
+            ...data,
+            ...last_responce
+        },
+    })
+
+    last_responce = {}
+}
+
+function getGuid() {
+    let guid = Storage.get('vast_device_guid', '')
+
+    if(!guid || guid.indexOf('00000000') === 0){
+        guid = Utils.guid()
+
+        Storage.set('vast_device_guid', guid)
+    }
+
+    return guid
+}
+
+function getUid(){
+    let uid = Storage.get('vast_device_uid', '')
+
+    if(!uid){
+        uid = Utils.uid(15)
+
+        Storage.set('vast_device_uid', uid)
+    }
+
+    return uid
+}
+
+window.adv_logs_responce_event = (e)=>{
+    last_responce = {
+        status: e.status,
+        text: e.text,
+    }
+
+    console.log('Ad', 'logs responce', last_responce)
+}
 
 class Vast{
     constructor(num, vast_url, vast_msg){
@@ -86,6 +135,19 @@ class Vast{
     start(){
         let block = this.vast_url ? {url: this.vast_url, name: 'plugin'} : this.get()
 
+        let movie        = Storage.get('activity', '{}').movie
+        let movie_genres = []
+        let movie_id     = movie ? movie.id : 0
+        let movie_imdb   = movie ? movie.imdb_id : ''
+        let movie_type   = movie ? (movie.original_name ? 'tv' : 'movie') : 'movie'
+
+        try{
+            movie_genres = movie.genres.map(g=>g.id)
+
+            if(block.whitout_genre && movie.genres.find(g=>g.id === block.whitout_genre)) return this.listener.send('empty')
+        }
+        catch(e){}
+
         stat('launch', block.name)
 
         this.block = Template.js('ad_video_block')
@@ -126,7 +188,11 @@ class Vast{
             stat('error', block.name)
             stat('error_' + code, block.name)
 
-            //if(code !== 500) log(block.name, msg)
+            log({
+                code,
+                name: block.name,
+                message: msg,
+            })
         }
 
         function initialize(){
@@ -174,27 +240,25 @@ class Vast{
 
             player.once('AdStarted', onAdStarted.bind(this))
 
-            let uid = Storage.get('vast_device_uid', '')
-
-            if(!uid){
-                uid = Utils.uid(15)
-
-                Storage.set('vast_device_uid', uid)
-            }
-
             let pixel_ratio = window.devicePixelRatio || 1
 
             let u = block.url.replace('{RANDOM}',Math.round(Date.now() * Math.random()))
-                u = u.replace('{TIME}',Date.now())
-                u = u.replace('{WIDTH}', Math.round(window.innerWidth * pixel_ratio))
-                u = u.replace('{HEIGHT}', Math.round(window.innerHeight * pixel_ratio))
-                u = u.replace('{PLATFORM}', Platform.get())
-                u = u.replace('{UID}', uid)
+                u = u.replace(/{TIME}/g,Date.now())
+                u = u.replace(/{WIDTH}/g, Math.round(window.innerWidth * pixel_ratio))
+                u = u.replace(/{HEIGHT}/g, Math.round(window.innerHeight * pixel_ratio))
+                u = u.replace(/{PLATFORM}/g, Platform.get())
+                u = u.replace(/{UID}/g, encodeURIComponent(getUid()))
+                u = u.replace(/{PIXEL}/g, pixel_ratio)
+                u = u.replace(/{GUID}/g, encodeURIComponent(getGuid()))
+                u = u.replace(/{MOVIE_ID}/g, movie_id)
+                u = u.replace(/{MOVIE_GENRES}/g, movie_genres.join(','))
+                u = u.replace(/{MOVIE_IMDB}/g, movie_imdb)
+                u = u.replace(/{MOVIE_TYPE}/g, movie_type)
 
             player.load(u).then(()=> {
                 return player.startAd()
             }).catch((reason)=> {
-                error((reason.message || '').indexOf('nobanner') >= 0 ? 500 : 100, reason.message)
+                error(100, reason.message)
             })
         }
 
@@ -288,7 +352,7 @@ class Vast{
             error(300,'Timeout')
         },10000)
 
-        console.log('Ad', 'run')
+        console.log('Ad', 'run', block.name, 'from', this.vast_url || 'plugin')
 
         try{
             initialize.apply(this)

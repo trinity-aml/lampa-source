@@ -9,8 +9,10 @@ import Vast from './vast'
 import Platform from '../../utils/platform'
 import Manifest from '../../utils/manifest'
 import Background from '../background'
+import Storage from '../../utils/storage'
 
 let next  = 0
+let running = false
 
 let vast_api
 let vast_url
@@ -46,7 +48,7 @@ function video(vast, num, started, ended){
         let time = Date.now()
 
         item.listener.follow('error', ()=>{
-            if(Date.now() - time < 1000*5 && num == 1) video(true, num + 1, started, ended)
+            if(Date.now() - time < 11000 && num < 4) video(true, num + 1, started, ended)
             else video(false, num, started, ended)
         })
     }
@@ -118,21 +120,39 @@ function launch(call){
 }
 
 function show(data, call){
-    if(data.vast_url && typeof data.vast_url == 'string' && vast_api && (!Account.hasPremium() || window.god_enabled)){
-        vast_url = data.vast_url
-        vast_msg = data.vast_msg
+    if(running) return console.log('Ad', 'skipped, already running')
 
-        return launch(call)
+    running = true
+
+    let ended = ()=>{
+        running = false
+
+        console.log('Ad', 'call ended')
+
+        call()
     }
 
-    if(window.god_enabled) launch(call)
+    if(data.vast_url && typeof data.vast_url == 'string' && vast_api && (!Account.hasPremium() || window.god_enabled)){
+        let plugin_launch = Storage.get('vast_plugin_launch', 0)
+
+        Storage.set('vast_plugin_launch', plugin_launch == 0 ? 1 : 0)
+
+        if(plugin_launch == 0){
+            vast_url = data.vast_url
+            vast_msg = data.vast_msg || Lang.translate('ad_plugin')
+
+            return launch(ended)
+        }
+    }
+
+    if(window.god_enabled) launch(ended)
     else if(!Account.hasPremium() && next < Date.now() && !(data.torrent_hash || data.youtube || data.iptv || data.continue_play) && !Personal.confirm()){
         VPN.region((code)=>{
-            if(code == 'ru') launch(call)
-            else call()
+            if(code == 'ru') launch(ended)
+            else ended()
         })
     }
-    else call()
+    else ended()
 }
 
 

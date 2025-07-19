@@ -441,7 +441,8 @@ function addDevice(){
                 title: Lang.translate('account_code_enter'),
                 nosave: true,
                 value: '',
-                layout: 'nums'
+                layout: 'nums',
+                keyboard: 'lampa',
             },(new_value)=>{
                 let code = parseInt(new_value)
 
@@ -752,7 +753,7 @@ function addDiscuss(params, call){
             
             call(data.result)
         },(j,e)=>{
-            Noty.show(j.responseJSON.text, {time: 5000})
+            Noty.show(network.errorJSON(j).text || Lang.translate('network_500'), {time: 5000})
         },{
             id: [params.method, params.id].join('_'),
             comment: params.comment,
@@ -771,7 +772,7 @@ function voiteDiscuss(params, call){
 
     if(account.token){
         network.silent(api() + 'discuss/voite',call,(j,e)=>{
-            Noty.show(j.responseJSON.text)
+            Noty.show(network.errorJSON(j).text || Lang.translate('network_500'))
         },params,{
             headers: {
                 token: account.token,
@@ -889,7 +890,9 @@ function backup(){
                                         type: "text/plain",
                                     })
                                 }
-                                catch(e){}
+                                catch(e){
+                                    console.log('Backup', 'file create error', e.message)
+                                }
 
                                 if(!file){
                                     try{
@@ -897,6 +900,8 @@ function backup(){
                                         file.lastModifiedDate = new Date()
                                     }
                                     catch(e){
+                                        console.log('Backup', 'file create error', e.message)
+
                                         Noty.show(Lang.translate('account_export_fail'))
                                     }
                                 }
@@ -930,12 +935,17 @@ function backup(){
 
                                             loader.remove()
                                         },
-                                        error: function(e){
-                                            Noty.show(Lang.translate('account_export_fail_' + (e.responseJSON.code || 500)))
+                                        error: function(e,x){
+                                            console.log('Backup', 'network error', network.errorDecode(e,x))
+
+                                            Noty.show(Lang.translate('account_export_fail_' + (network.errorJSON(e).code || 500)))
 
                                             loader.remove()
                                         }
                                     })
+                                }
+                                else{
+                                    console.log('Backup', 'file not created')
                                 }
                             }
 
@@ -948,7 +958,6 @@ function backup(){
                 }
                 else if(a.import){
                     network.silent(api() + 'users/backup/import',(data)=>{
-                        
                         if(data.data){
                             let imp  = 0
                             let ers  = 0

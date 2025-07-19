@@ -283,15 +283,15 @@ function checkEmptyUrl(url){
 }
 
 function rewriteIfHTTPS(u){
-    return window.location.protocol == 'https:' ? u.replace(/(http:\/\/|https:\/\/)/g, 'https://') : u
+    return window.location.protocol == 'https:' ? u.replace(/^(http:\/\/|https:\/\/)/, 'https://') : u
 }
 
 function fixProtocolLink(u){
-    return rewriteIfHTTPS((localStorage.getItem('protocol') || 'https') + '://' + u.replace(/(http:\/\/|https:\/\/)/g, ''))
+    return rewriteIfHTTPS((localStorage.getItem('protocol') || 'https') + '://' + u.replace(/^(http:\/\/|https:\/\/)/, ''))
 }
 
 function fixMirrorLink(u){
-    Manifest.cub_mirrors.forEach(mirror=>{
+    Manifest.old_mirrors.forEach(mirror=>{
         u = u.replace('://' + mirror, '://' + Manifest.cub_domain)
     })
 
@@ -839,6 +839,26 @@ function qualityToText(quality){
     return text
 }
 
+function guid() {
+    let hex = "0123456789ABCDEF";
+    let gi  = "";
+
+    for (let i = 0; i < 36; i++) {
+        if (i === 8 || i === 13 || i === 18 || i === 23) {
+            gi += "-";
+        } else {
+            let r = Math.floor(Math.random() * 16);
+            // Устанавливаем версию и variant по UUIDv4 спецификации
+            if (i === 14) r = 4; // версия 4
+            if (i === 19) r = (r & 0x3) | 0x8; // variant
+            gi += hex[r];
+        }
+    }
+    
+    return gi;
+}
+
+
 export default {
     secondsToTime,
     secondsToTimeHuman,
@@ -866,6 +886,7 @@ export default {
     pathToNormalTitle,
     hash,
     uid,
+    guid,
     copyTextToClipboard,
     imgLoad,
     isTouchDevice,

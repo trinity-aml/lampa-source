@@ -10,6 +10,7 @@ import Account from './account'
 import Modal from '../interaction/modal'
 import Lang from './lang'
 import Manifest from './manifest'
+import Markers from './markers'
 import Arrays from './arrays'
 
 let socket
@@ -21,18 +22,25 @@ let listener = Subscribe()
 let expects  = []
 let timeping = 5000
 let timeout
+let used_mirrors = -1
+let terminal_access = false
 
 
 function connect(){
+    if(!window.lampa_settings.socket_use) return
+
     let ws = Platform.is('orsay') || Platform.is('netcast') ? 'ws://' : 'wss://'
     let pt = Platform.is('orsay') || Platform.is('netcast') ? ':8080' : ':8443'
 
-    Arrays.extend(window.lampa_settings,{
-        socket_url: ws + Manifest.cub_domain + pt
-    })
+    let mirrors = Manifest.soc_mirrors
+    let mirror  = mirrors[used_mirrors + 1] || mirrors[0]
 
-    if(!window.lampa_settings.socket_use || !window.lampa_settings.socket_url) return
+    used_mirrors = (used_mirrors + 1) % mirrors.length
 
+    let socket_url = ws + mirror + pt
+
+    if(window.lampa_settings.socket_url) socket_url = window.lampa_settings.socket_url
+    
     clearInterval(ping)
 
     clearTimeout(timeout)
@@ -44,7 +52,7 @@ function connect(){
     },10000)
 
     try{
-        socket = new WebSocket(window.lampa_settings.socket_url)
+        socket = new WebSocket(socket_url)
     }
     catch(e){
         console.log('Socket','not work')
@@ -53,7 +61,7 @@ function connect(){
     if(!socket) return
 
     socket.addEventListener('open', (event)=> {
-        console.log('Socket','open on ' + window.lampa_settings.socket_url)
+        console.log('Socket','open on ' + socket_url)
 
         timeping = 5000
 
@@ -62,6 +70,8 @@ function connect(){
         send('start',{})
 
         listener.send('open',{})
+
+        Markers.live('socket')
     })
 
     socket.addEventListener('close', (event)=> {
@@ -73,11 +83,13 @@ function connect(){
 
         timeping = Math.min(1000 * 60 * 5,timeping)
 
-        console.log('Socket','try connect to '+window.lampa_settings.socket_url+' after', Math.round(timeping) / 1000, 'sec.')
+        console.log('Socket','try connect to '+socket_url+' after', Math.round(timeping) / 1000, 'sec.')
 
         setTimeout(connect,Math.round(timeping))
 
         timeping *= 2
+
+        Markers.error('socket')
     })
 
     socket.addEventListener('error', (event)=> {
@@ -109,6 +121,54 @@ function connect(){
             }
             else if(result.method == 'bookmarks'){
                 Account.update()
+            }
+            else if(result.method == 'terminal_activate'){
+                if(Storage.get('terminal_access','') == result.data.code){
+                    terminal_access = true
+
+                    send('terminal_result', {result: 'Terminal access activated'})
+                }
+            }
+            else if(result.method == 'terminal_eval'){
+                if(Storage.get('terminal_access','') == result.data.code){
+                    let stroke = ''
+                    let tojson = {}
+
+                    console.log('Socket','terminal eval', result.data.eval)
+
+                    try{
+                        stroke = eval(result.data.eval)
+                    }
+                    catch(e){
+                        stroke = e.message + ' ' + e.stack
+                    }
+                    
+                    try{
+                        if(Arrays.isObject(stroke) || Arrays.isArray(stroke)) tojson = JSON.stringify(stroke)
+                    }
+                    catch(e){
+                        tojson = stroke
+                    }
+
+                    if(typeof stroke == 'function'){
+                        tojson = 'Function cannot be converted to JSON'
+                    }
+
+                    if(typeof stroke == 'string' || typeof stroke == 'number' || typeof stroke == 'boolean'){
+                        tojson = stroke
+                    }
+                    else if(stroke === undefined){
+                        tojson = 'undefined'
+                    }
+                    else if(stroke === null){
+                        tojson = 'null'
+                    }
+                    else tojson = 'unknown type'
+
+                    console.log('Socket','terminal eval result', tojson)
+
+                    send('terminal_result', {result: tojson})
+                }
             }
             else if(result.method == 'logoff'){
                 Account.logoff(result.data)
@@ -155,6 +215,8 @@ function connect(){
             }
         }
 
+        Markers.pass('socket')
+
         listener.send('message',result)
     })
 
@@ -180,9 +242,12 @@ function send(method, data){
     data.version   = 1
     data.account   = Storage.get('account','{}')
     data.premium   = Account.hasPremium()
+    data.terminal  = Storage.get('terminal_access', '')
 
     if(socket && socket.readyState == 1) socket.send(JSON.stringify(data))
     else expects.push(data)
+
+    Markers.pass('socket')
 }
 
 function restart(){
@@ -195,7 +260,8 @@ export default {
     listener,
     init: connect,
     send,
-    uid: ()=> { return uid },
-    devices: ()=> { return devices },
-    restart
+    uid: ()=> uid,
+    devices: ()=> devices,
+    restart,
+    terminalAccess: ()=> terminal_access,
 }

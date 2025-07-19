@@ -9,6 +9,8 @@ import Platform from './platform'
 import Manifest from './manifest'
 import Mirrors from './mirrors'
 
+let bad_mirrors = {}
+
 function create(){
     let listener = Subscribe();
 
@@ -257,6 +259,10 @@ function create(){
         return errorCode(jqXHR)
     }
 
+    this.errorJSON = function(jqXHR){
+        return errorJSON(jqXHR)
+    }
+
     function errorDecode(jqXHR, exception){
         if(!Arrays.isObject(jqXHR)) return Lang.translate('network_error')
 
@@ -293,12 +299,85 @@ function create(){
         return jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON.code : jqXHR ? jqXHR.status : 404
     }
 
+    function errorJSON(jqXHR){
+        return jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : {
+            code: jqXHR ? jqXHR.status : 404,
+            text: jqXHR ? jqXHR.responseText || jqXHR.message || Lang.translate('network_404') : Lang.translate('network_404')
+        }
+    }
+
+    function go(params){
+        params.url = params.url || 'no url'
+
+        let error     = false
+        let hasmirror = Manifest.cub_mirrors.find(m=>params.url.indexOf(m) >= 0)
+        
+        if(hasmirror && params.url.indexOf('api/checker') == -1){
+            let mirrors = Manifest.cub_mirrors
+            
+            Arrays.remove(mirrors, hasmirror)
+
+            for(let name in bad_mirrors){
+                let mirror = bad_mirrors[name]
+
+                if(Date.now() - mirror.time > 1000 * 60 * 10){
+                    mirror.time = Date.now()
+                    mirror.urls = []
+                }
+
+                if(mirror.urls.length > 10){
+                    console.log('Request','bad mirror:', name, 'count:', mirror.urls.length)
+
+                    Arrays.remove(mirrors, name)
+
+                    mirror.urls = mirror.urls.slice(-11)
+                }
+            }
+
+            error = function(jqXHR, exception){
+                if(mirrors.length > 0 && (jqXHR.status < 400 || jqXHR.error_time > 1000 * 15)){
+                    if(!bad_mirrors[hasmirror]) bad_mirrors[hasmirror] = {
+                        urls: [],
+                        time: Date.now()
+                    }
+
+                    if(bad_mirrors[hasmirror].urls.indexOf(params.url) < 0){
+                        bad_mirrors[hasmirror].urls.push(params.url)
+                    }
+
+                    let next = mirrors.shift()
+
+                    console.log('Request','try next mirror for:', params.url, 'next mirror:', next)
+
+                    Manifest.cub_mirrors.forEach(mirror=>{
+                        params.url = params.url.replace(mirror, next)
+                    })
+
+                    hasmirror = next
+
+                    request(params, error)
+                }
+                else{
+                    if(params.before_error) params.before_error(jqXHR, exception);
+
+                    if(params.error) params.error(jqXHR, exception);
+
+                    if(params.after_error) params.after_error(jqXHR, exception);
+
+                    if(params.end) params.end();
+                }
+            }
+        }
+
+        request(params, error)
+    }
+
 
     /**
      * Сделать запрос
      * @param {Object} params 
      */
-    function go(params){
+    function request(params, errorCallback = false){
         Lampa.Listener.send('request_before', {params});
 
         let start_time = Date.now()
@@ -307,12 +386,18 @@ function create(){
             jqXHR.decode_error = errorDecode(jqXHR, exception);
             jqXHR.decode_code  = errorCode(jqXHR);
 
-            Lampa.Listener.send('request_error', {params, error: jqXHR});
+            params.url = params.url || 'no url';
+
+            Lampa.Listener.send('request_error', {params, error: jqXHR, exception});
 
             let end_time = Date.now() - start_time
             let time = end_time > 1000 ? Math.round(end_time / 1000) + 's' : end_time + 'ms'
+
+            jqXHR.error_time = time
             
             console.log('Request',params.post_data ? 'POST' : 'GET','time:',time,'error of '+params.url+' :', errorDecode(jqXHR, exception));
+
+            if(errorCallback) return errorCallback(jqXHR, exception);
 
             if(params.before_error) params.before_error(jqXHR, exception);
 

@@ -26,6 +26,45 @@ function init(){
         return Storage.get('account','{}').email || ''
     }
 
+    function check(){
+        console.log('TMDB-Proxy', 'start check')
+
+        $.ajax({
+            url: TMDB.api('discover/movie?with_genres=14&api_key=' + TMDB.key() + '&language=ru-RU'),
+            dataType: 'json',
+            timeout: 6000,
+            error: function(){
+                console.log('TMDB-Proxy','api error', tmdb_proxy.path_api + ' not responding, using backup proxy')
+
+                if(Utils.protocol() == 'https://' || Storage.field('protocol') == 'https'){
+                    console.log('TMDB-Proxy','api cannot use https, use http only')
+                }
+                else{
+                    tmdb_proxy.path_api = 'lampa.byskaz.ru/tmdb/api/3/'
+                }
+            }
+        })
+
+        let test_image = new Image()
+
+        test_image.onload = function() {
+            console.log('TMDB-Proxy', 'image proxy is working')
+        }
+
+        test_image.onerror = function() {
+            console.log('TMDB-Proxy', 'image error', tmdb_proxy.path_image + ' not responding, using backup proxy')
+
+            if(Utils.protocol() == 'https://' || Storage.field('protocol') == 'https'){
+                console.log('TMDB-Proxy','image cannot use https, use http only')
+            }
+            else{
+                tmdb_proxy.path_image = 'lampa.byskaz.ru/tmdb/img/'
+            }
+        }
+
+        test_image.src = TMDB.image('t/p/w200/3txl2FUNZCQUnHQPzkuNc17yLIs.jpg')
+    }
+
     TMDB.image = function(url){
         let base  = Utils.protocol() + 'image.tmdb.org/' + url
 
@@ -47,6 +86,8 @@ function init(){
     console.log('TMDB-Proxy','init')
 
     console.log('TMDB-Proxy','enabled', Storage.field('proxy_tmdb'))
+
+    check()
 }
 
 export default {
