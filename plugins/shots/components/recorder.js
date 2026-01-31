@@ -1,44 +1,26 @@
 import Utils from '../utils/utils.js'
+import Defined from '../defined.js'
+import Metric from '../utils/metric.js'
+
 
 function Recorder(video){
     this.html = Lampa.Template.get('shots_player_recorder')
 
-    this.start_time   = Date.now()
-    this.max_duration = 60 * 5 // 5 минут
+    let start_point = video.currentTime
 
     this.start = function(){
+        Metric.counter('shots_recorder_start')
+        
         try{
-            let stream  = video.captureStream()
-            let options = { 
-                mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 1000000,
-                audioBitsPerSecond: 128000 
-            }
-
-            this.recorder = new MediaRecorder(stream, options)
-
-            let chunks = []
-
-            this.recorder.ondataavailable = e => chunks.push(e.data)
-            this.recorder.onstop = () => {
-                let blob = new Blob(chunks, { type: 'video/webm' })
-
-                this.destroy()
-
-                this.onStop({
-                    duration: (Date.now() - this.start_time) / 1000,
-                    blob: blob,
-                    screenshot: this.screenshot
-                })
-            }
-
-            this.screenshot = Utils.videoScreenShot(video, 500)
+            this.screenshot = Utils.videoScreenShot(video, Defined.screen_size)
 
             this.run()
 
-            this.recorder.start()
+            this.html.find('.shots-player-recorder__stop').on('click', this.stop.bind(this))
         }
         catch(e){
+            console.error('Recorder', e.message)
+
             this.error(e)
         }
     }
@@ -50,6 +32,7 @@ function Recorder(video){
             toggle: ()=>{
                 Lampa.Controller.clear()
             },
+            enter: this.stop.bind(this),
             back: this.stop.bind(this)
         })
 
@@ -63,22 +46,41 @@ function Recorder(video){
     }
 
     this.tik = function(){
-        let duration = Date.now() - this.start_time
-        let seconds  = duration / 1000
+        let seconds  = Math.round(video.currentTime - start_point)
         let progress = Lampa.Utils.secondsToTime(seconds).split(':')
             progress = progress[1] + ':' + progress[2]
 
-        this.html.find('.shots-player-recorder__text span').text(progress + ' / ' + Lampa.Utils.secondsToTimeHuman(this.max_duration))
+        this.html.find('.shots-player-recorder__text span').text(progress + ' / ' + Lampa.Utils.secondsToTimeHuman(Defined.recorder_max_duration))
+
+        if(seconds >= Defined.recorder_max_duration) this.stop()
     }
 
     this.error = function(e){
         this.destroy()
 
         this.onError(e)
+
+        Metric.counter('shots_recorder_error')
     }
 
     this.stop = function(){
-        this.recorder.stop()
+        let elapsed = video.currentTime - start_point
+
+        if(elapsed < 1){
+            this.error(new Error('Stoped too early, maybe codecs not supported'))
+        }
+        else{
+            this.destroy()
+
+            this.onStop({
+                duration: Math.round(elapsed),
+                screenshot: this.screenshot,
+                start_point: Math.round(start_point),
+                end_point: Math.round(video.currentTime)
+            })
+
+            Metric.counter('shots_recorder_end')
+        }
     }
 
     this.destroy = function(){

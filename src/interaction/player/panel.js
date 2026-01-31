@@ -226,7 +226,9 @@ function init(){
             touch.move = percent(point) * 100
             touch.to   = Math.max(0,Math.min(100,touch.now + (touch.move - touch.from)))
 
-            elems.position.width(touch.to + '%')
+            timeline_last.position = touch.to + '%'
+
+            elems.timenow.text(Utils.secondsToTime(touch.to / 100 * (Video.video().duration || 0)))
 
             Video.video().rewind = true
 
@@ -465,12 +467,15 @@ function drawSegments(){
 
     for(let name in segments){
         for(let a = 0; a < segments[name].length; a++){
-            let seg = segments[name][a]
+            let seg      = segments[name][a]
             let seg_elem = $(`<div class="player-panel__timeline-segment player-panel__timeline-segment--${name}"></div>`)
-
             let duration = Video.video().duration || 0
-            let start    = seg.start / duration * 100
-            let length   = (seg.end - seg.start) / duration * 100
+
+            let r_start = Math.min(duration, seg.start)
+            let r_end   = Math.min(duration, seg.end)
+            
+            let start    = r_start / duration * 100
+            let length   = (r_end - r_start) / duration * 100
 
             seg_elem.css({
                 left: duration ? start + '%' : 0,

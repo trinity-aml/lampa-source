@@ -3,6 +3,7 @@ import Api from './api'
 import Select from '../../interaction/select'
 import Noty from '../../interaction/noty'
 import Lang from '../lang'
+import Modal from './modal'
 
 function inject(callback){
     if(!Permit.access) return console.warn('Backup', 'no access'), callback && callback()
@@ -45,8 +46,11 @@ function publish(callback){
     confirm('', ()=>{
         let file
 
+        // Удаляем из бэкапа app.js
+        let serialized = JSON.stringify(localStorage, (key, value) => key === 'app.js' ? undefined : value)
+
         try{
-            file = new File([JSON.stringify(localStorage)], "backup.json", {
+            file = new File([serialized], "backup.json", {
                 type: "text/plain",
             })
         }
@@ -56,7 +60,7 @@ function publish(callback){
 
         if(!file){
             try{
-                file = new Blob([JSON.stringify(localStorage)], {type: 'text/plain'})
+                file = new Blob([serialized], {type: 'text/plain'})
                 file.lastModifiedDate = new Date()
             }
             catch(e){
@@ -86,7 +90,7 @@ function publish(callback){
                     callback && callback()
 
                     if(j.secuses){
-                        if(j.limited) showLimitedAccount()
+                        if(j.limited) Modal.limited()
                         else Noty.show(Lang.translate('account_export_secuses'))
                     }
                     else Noty.show(Lang.translate('account_export_fail'))

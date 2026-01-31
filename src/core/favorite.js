@@ -22,6 +22,8 @@ function init(){
     read()
 
     ContentRows.add({
+        name: 'continue_watch',
+        title: Lang.translate('title_continue'),
         index: 1,
         screen: ['main', 'category'],
         call: (params, screen)=>{
@@ -62,6 +64,12 @@ function init(){
 
                     // Оставляем только те у которых просмотр меньше 10%
                     new_episode = new_episode.filter(n=>n.viewed < 10)
+
+                    new_episode = new_episode.filter((e)=>{
+                        let jpan  = Utils.containsJapanese(e.original_name || e.name || '') || e.original_language == 'ja'
+
+                        return media == 'anime' ? jpan : !jpan
+                    })
 
                     if(new_episode.length){
                         // Убираем из основного списка карточки у которых есть новые серии
@@ -106,7 +114,7 @@ function add(where, card, limit){
 
             listener.send('add', {where, card})
 
-            if(!search(card.id)) data.card.push(card)
+            if(!search(card.id)) data.card.push(Utils.clearCard(Arrays.clone(card)))
 
             if(limit){
                 let excess = data[where].slice(limit)

@@ -12,6 +12,7 @@ import Cache from '../../utils/cache'
 import Noty from '../../interaction/noty'
 import Timer from '../timer'
 import Lang from '../lang'
+import LoadingProgress from '../../interaction/loading_progress'
 
 let bookmarks     = [] // имеет вид [{id, cid, card_id, type, data, profile, time},...]
 let bookmarks_map = {} // имеет вид {type: {card_id: bookmark, ...}, ...}
@@ -21,6 +22,8 @@ let tracker_data  = {
     version: 0,
     time: 0
 }
+
+let update_timer
 
 /**
  * Запуск
@@ -86,19 +89,24 @@ function push(method, type, card){
             card_id: card.id,
             id: find ? find.id : 0
         }).then(()=>{
-            update(()=>{
-                // Оповещаем другие устройства о изменении закладок
-                Socket.send('bookmarks',{}) 
+            clearTimeout(update_timer)
 
-                // Глобальное оповещение об изменении закладок для обновления карточек
-                Lampa.Listener.send('state:changed', {
-                    target: 'favorite',
-                    reason: 'update',
-                    method,
-                    card,
-                    type
+            // Видимо сразу несколько изменений могут прийти, поэтому ждем секунду перед обновлением
+            update_timer = setTimeout(()=>{
+                update(()=>{
+                    // Оповещаем другие устройства о изменении закладок
+                    Socket.send('bookmarks',{}) 
+
+                    // Глобальное оповещение об изменении закладок для обновления карточек
+                    Lampa.Listener.send('state:changed', {
+                        target: 'favorite',
+                        reason: 'update',
+                        method,
+                        card,
+                        type
+                    })
                 })
-            })
+            },1000)
         }).catch(()=>{
             console.warn('Account', 'bookmarks ' + method + ' fail')
         })
@@ -166,19 +174,30 @@ function update(call){
     if(Permit.sync){
         console.log('Account', 'sync enabled, updating bookmarks')
 
+        LoadingProgress.status('Bookmarks start sync')
+
         loadTrackerData(()=>{
             // Если с момента последнего обновления прошло больше 15 дней, то загружаем дамп
             if(tracker_data.time < Date.now() - 1000 * 60 * 60 * 24 * 15){
                 console.log('Account', 'bookmarks start full update', tracker_data.version)
 
+                LoadingProgress.status('Bookmarks loading full dump')
+
                 Api.load('bookmarks/dump', {dataType: 'text'}).then((result)=>{
+                    LoadingProgress.status('Bookmarks parsing dump')
+
+                    // !!! WebWorker почему-то зависает на телевизорах и вылетает, пока без него
                     // Парсим текст в массив закладок
-                    WebWorker.json({
-                        type: 'parse',
-                        data: result
-                    },(e)=>{
+                    // WebWorker.json({
+                    //     type: 'parse',
+                    //     data: result
+                    // },(e)=>{
+                        console.log('Account', 'bookmarks dump load complete, size:', result.length)
+
+                        let e = {data:Arrays.decodeJson(result, {})}
+
                         if(!e.data.bookmarks){
-                            console.error('Account', 'bookmarks wrong dump format', result)
+                            console.error('Account', 'bookmarks wrong dump format', Utils.shortText(result, 300))
 
                             if(call && typeof call == 'function') call()
 
@@ -193,10 +212,12 @@ function update(call){
 
                             if(call && typeof call == 'function') call()
                         })
-                    })
-                }).catch(()=>{
-                    console.error('Account', 'bookmarks full update fail, trying load from cache')
-                    
+                    //})
+                }).catch((e)=>{
+                    LoadingProgress.status('Bookmarks no dump load, trying cache')
+
+                    console.error('Account', 'bookmarks full update fail, trying load from cache:', 'message', e.message)
+
                     loadFromCache(()=>{
                         if(call && typeof call == 'function') call()
                     })
@@ -205,9 +226,15 @@ function update(call){
             // Иначе получаем только изменения с последней версии
             else{
                 console.log('Account', 'bookmarks start update since', tracker_data.version)
+
+                LoadingProgress.status('Bookmarks load from cache')
                 
                 loadFromCache(()=>{
+                    LoadingProgress.status('Bookmarks loading changelog')
+
                     Api.load('bookmarks/changelog?since=' + tracker_data.version).then((result)=>{
+                        LoadingProgress.status('Bookmarks applying changelog')
+
                         result.changelog.forEach((change)=>{
                             if(change.action == 'remove'){
                                 let find = bookmarks.find((book)=>book.id == change.entity_id)

@@ -18,6 +18,10 @@ function init(){
     Socket.listener.follow('open',()=>{
         if(Date.now() - window.app_time_end > 1000 * 60 * 5) update()
     })
+
+    Storage.listener.follow('clear',()=>{
+        refrash()
+    })
 }
 
 /**
@@ -54,8 +58,10 @@ function update(){
                     let name   = 'file_view_' + Permit.account.profile.id
 
                     if(!data.timelines){
-                        return console.error('Account', 'timeline wrong dump format, no timelines')
+                        return console.error('Account', 'timeline wrong dump format, no timelines:', result)
                     }
+
+                    console.log('Account', 'timeline dump loaded, items:', Object.keys(data.timelines).length, 'profile id:', Permit.account.profile.id)
 
                     // Если нет файла в localStorage, то создаем его из кеша
                     if(window.localStorage.getItem(name) === null){
@@ -86,7 +92,7 @@ function update(){
                             time: 0
                         })
 
-                        console.log('Account', 'timeline dump error, not saved to storage, try again next update')
+                        console.warn('Account', 'timeline dump error, not saved to storage, try again next update')
                     })
 
                     tracker.update({
@@ -107,6 +113,8 @@ function update(){
             console.log('Account', 'timeline start update since', tracker.version())
             
             Api.load('timeline/changelog?since=' + tracker.version()).then((result)=>{
+                console.log('Account', 'timeline changelog loaded, items:', Object.keys(result.timelines || {}).length, 'profile id:', Permit.account.profile.id)
+
                 for(let i in result.timelines){
                     let time = result.timelines[i]
                         time.received = true // Чтоб снова не отправлять и не зациклить

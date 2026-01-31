@@ -50,14 +50,16 @@ function add(object, success, fail){
 
     if(send_data && send_data.movie) send_data.movie = Utils.clearCard(send_data.movie)
 
-    let data = JSON.stringify({
+    let json = {
         action: 'add',
         link: object.link,
         title: '[LAMPA] ' + ((object.title)+'').replace('??', '?'),
         poster: object.poster,
         data: send_data ? JSON.stringify(send_data) : '',
         save_to_db: true,
-    })
+    }
+
+    let data = JSON.stringify(json)
 
     clear()
 
@@ -69,14 +71,16 @@ function hash(object, success, fail){
 
     if(send_data && send_data.movie) send_data.movie = Utils.clearCard(send_data.movie)
 
-    let data = JSON.stringify({
+    let json = {
         action: 'add',
         link: object.link,
         title: '[LAMPA] ' + ((object.title)+'').replace('??', '?'),
         poster: object.poster,
         data: send_data ? JSON.stringify(send_data) : '',
         save_to_db: Storage.get('torrserver_savedb','false'),
-    })
+    }
+
+    let data = JSON.stringify(json)
 
     clear()
 
